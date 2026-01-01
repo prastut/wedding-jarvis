@@ -7,10 +7,12 @@ This guide walks you through setting up Meta Business and WhatsApp Cloud API fro
 ## Phase A: Create Meta Business Account
 
 ### A1. Create Facebook Account (if needed)
+
 - [ ] Go to facebook.com and create a personal Facebook account
 - [ ] Verify your email address
 
 ### A2. Create Meta Business Account
+
 - [ ] Go to **business.facebook.com**
 - [ ] Click "Create Account"
 - [ ] Enter business name (e.g., "Wedding Jarvis" or your name)
@@ -18,6 +20,7 @@ This guide walks you through setting up Meta Business and WhatsApp Cloud API fro
 - [ ] Verify the email sent to you
 
 ### A3. Business Verification (IMPORTANT)
+
 - [ ] In Business Settings → "Security Center" → "Start Verification"
 - [ ] Upload documents: government ID, utility bill, or business registration
 - [ ] Wait 1-5 business days for approval
@@ -28,11 +31,13 @@ This guide walks you through setting up Meta Business and WhatsApp Cloud API fro
 ## Phase B: Create Meta App
 
 ### B1. Access Meta Developers
+
 - [ ] Go to **developers.facebook.com**
 - [ ] Log in with your Facebook account
 - [ ] Click "My Apps" in top right
 
 ### B2. Create New App
+
 - [ ] Click "Create App"
 - [ ] Select **"Business"** as the app type
 - [ ] Enter App Display Name: "Wedding Jarvis"
@@ -41,6 +46,7 @@ This guide walks you through setting up Meta Business and WhatsApp Cloud API fro
 - [ ] Click "Create App"
 
 ### B3. Add WhatsApp Product
+
 - [ ] On App Dashboard, find "Add Products to Your App"
 - [ ] Find **WhatsApp** and click "Set Up"
 
@@ -49,21 +55,24 @@ This guide walks you through setting up Meta Business and WhatsApp Cloud API fro
 ## Phase C: WhatsApp Business Setup
 
 ### C1. Get Test Credentials
+
 On the WhatsApp Getting Started page, note these values:
 
-| Value | Where to Find | Save As |
-|-------|---------------|---------|
-| Phone Number ID | Under "From" dropdown | `WHATSAPP_PHONE_NUMBER_ID` |
-| WhatsApp Business Account ID | Same page | For reference |
-| Temporary Access Token | Click to copy (expires 24h) | `WHATSAPP_ACCESS_TOKEN` (temporary) |
+| Value                        | Where to Find               | Save As                             |
+| ---------------------------- | --------------------------- | ----------------------------------- |
+| Phone Number ID              | Under "From" dropdown       | `WHATSAPP_PHONE_NUMBER_ID`          |
+| WhatsApp Business Account ID | Same page                   | For reference                       |
+| Temporary Access Token       | Click to copy (expires 24h) | `WHATSAPP_ACCESS_TOKEN` (temporary) |
 
 ### C2. Add Test Phone Numbers
+
 - [ ] In "To" field, click "Manage phone number list"
 - [ ] Add your personal phone numbers (up to 5 for testing)
 - [ ] Enter the verification code sent to each number
 - [ ] **These are the only numbers that can receive messages initially**
 
 ### C3. Test Send a Message
+
 - [ ] Use the "Send Message" button on Getting Started page
 - [ ] Verify you receive the test message on your phone
 - [ ] If it works, your basic setup is correct!
@@ -82,16 +91,19 @@ On the WhatsApp Getting Started page, note these values:
 | Business landline | Professional | Voice verification only |
 
 **Requirements:**
+
 - Number must NOT already be on WhatsApp or WhatsApp Business
 - You must be able to receive SMS or voice call on it
 
 ### D2. Add Your Number
+
 - [ ] In WhatsApp → Getting Started, click "Add phone number"
 - [ ] Enter the phone number
 - [ ] Choose verification method (SMS or Voice)
 - [ ] Enter the verification code
 
 ### D3. Complete Profile
+
 - [ ] Enter display name for your WhatsApp Business
 - [ ] Select business category
 - [ ] Add a profile picture (wedding photo?)
@@ -104,6 +116,7 @@ On the WhatsApp Getting Started page, note these values:
 The temporary token expires in 24 hours. You need a permanent one.
 
 ### E1. Create System User
+
 - [ ] Go to **business.facebook.com** → Business Settings
 - [ ] Under "Users" → click "System Users"
 - [ ] Click "Add"
@@ -112,6 +125,7 @@ The temporary token expires in 24 hours. You need a permanent one.
 - [ ] Click "Create System User"
 
 ### E2. Assign Assets
+
 - [ ] Click on the system user you created
 - [ ] Click "Add Assets"
 - [ ] Select "Apps" tab
@@ -120,6 +134,7 @@ The temporary token expires in 24 hours. You need a permanent one.
 - [ ] Click "Save Changes"
 
 ### E3. Generate Token
+
 - [ ] Click on your system user
 - [ ] Click "Generate New Token"
 - [ ] Select your app (Wedding Jarvis)
@@ -137,10 +152,12 @@ The temporary token expires in 24 hours. You need a permanent one.
 > **Prerequisite**: Your backend must be deployed first (see main spec)
 
 ### F1. Get Your Deployed URL
+
 - [ ] Deploy your app to Railway
 - [ ] Note your URL: `https://your-app.railway.app`
 
 ### F2. Configure Webhook in Meta
+
 - [ ] In Meta Developers → your app → WhatsApp → Configuration
 - [ ] Under "Webhook", click "Edit"
 - [ ] Callback URL: `https://your-app.railway.app/webhook`
@@ -149,6 +166,7 @@ The temporary token expires in 24 hours. You need a permanent one.
 - [ ] Click "Verify and Save"
 
 ### F3. Subscribe to Webhook Fields
+
 - [ ] After verification, click "Manage" under Webhook fields
 - [ ] Subscribe to:
   - [ ] **messages** (required - for receiving messages)
@@ -161,16 +179,19 @@ The temporary token expires in 24 hours. You need a permanent one.
 Templates are required for sending messages outside the 24-hour session window (e.g., broadcasts).
 
 ### G1. Navigate to Templates
+
 - [ ] Go to WhatsApp → Message Templates
 - [ ] Or: business.facebook.com → WhatsApp Manager → Message Templates
 
 ### G2. Create `wedding_update` Template
+
 - [ ] Click "Create Template"
 - [ ] Category: **Utility**
 - [ ] Name: `wedding_update` (lowercase, underscores only)
 - [ ] Language: English
 
 ### G3. Design Template
+
 ```
 Header (optional): Wedding Update
 
@@ -184,10 +205,10 @@ Reply MENU for options or STOP to unsubscribe.
 Footer (optional): Wedding Jarvis
 ```
 
-| Variable | Purpose | Example |
-|----------|---------|---------|
-| `{{1}}` | Topic/Title | "Baraat Schedule Change" |
-| `{{2}}` | Message body | "The baraat will now arrive at 4pm instead of 3pm" |
+| Variable | Purpose      | Example                                            |
+| -------- | ------------ | -------------------------------------------------- |
+| `{{1}}`  | Topic/Title  | "Baraat Schedule Change"                           |
+| `{{2}}`  | Message body | "The baraat will now arrive at 4pm instead of 3pm" |
 
 - [ ] Click "Submit"
 - [ ] Wait for approval (usually 24-48 hours)
@@ -224,18 +245,21 @@ NODE_ENV=production
 ## Troubleshooting
 
 ### Webhook not receiving messages?
+
 - [ ] Check Railway logs for incoming requests
 - [ ] Verify URL is publicly accessible (try visiting it in browser)
 - [ ] Ensure `messages` field is subscribed in webhook settings
 - [ ] Check verify token matches between Meta and your env vars
 
 ### Messages not sending?
+
 - [ ] Verify access token is valid (not the expired temporary one)
 - [ ] Check phone number ID is correct
 - [ ] For non-test numbers: business verification must be complete
 - [ ] Outside 24-hour window? Must use template messages
 
 ### Template rejected?
+
 - [ ] Avoid promotional language in Utility templates
 - [ ] Ensure variable format is correct `{{1}}` not `{1}`
 - [ ] Check Meta's template policy guidelines
@@ -247,19 +271,19 @@ NODE_ENV=production
 
 ### WhatsApp Messaging Rules
 
-| Scenario | Message Type | Cost |
-|----------|--------------|------|
-| User messaged you in last 24h | Free-form text | Free |
-| Outside 24h window | Template messages only | Paid |
-| Broadcast to opted-in users | Template messages | Paid |
+| Scenario                      | Message Type           | Cost |
+| ----------------------------- | ---------------------- | ---- |
+| User messaged you in last 24h | Free-form text         | Free |
+| Outside 24h window            | Template messages only | Paid |
+| Broadcast to opted-in users   | Template messages      | Paid |
 
 ### Rate Limits (by phone number quality)
 
-| Quality | Daily Limit |
-|---------|-------------|
-| New number | 250 messages |
-| Good quality | 1,000 messages |
-| High quality | 10,000 messages |
+| Quality           | Daily Limit       |
+| ----------------- | ----------------- |
+| New number        | 250 messages      |
+| Good quality      | 1,000 messages    |
+| High quality      | 10,000 messages   |
 | Verified business | 100,000+ messages |
 
 Maintain "Green" quality rating in WhatsApp Manager by avoiding blocks/reports.

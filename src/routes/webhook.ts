@@ -1,0 +1,135 @@
+import { Router, Request, Response } from 'express';
+import { config } from '../config';
+import { sendTextMessage } from '../services/whatsapp/client';
+import { handleMessage } from '../services/bot/menu-router';
+import { findOrCreateGuest } from '../repositories/guests';
+import { logMessage } from '../repositories/message-logs';
+import type { WhatsAppInboundMessage } from '../types';
+
+const router = Router();
+
+// GET /webhook - Verification challenge from Meta
+router.get('/', (req: Request, res: Response) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  console.log('Webhook verification request:', { mode, token, challenge: challenge?.toString().substring(0, 20) });
+
+  if (mode === 'subscribe' && token === config.whatsapp.verifyToken) {
+    console.log('Webhook verified successfully');
+    res.status(200).send(challenge);
+  } else {
+    console.log('Webhook verification failed');
+    res.sendStatus(403);
+  }
+});
+
+// POST /webhook - Receive inbound messages
+router.post('/', async (req: Request, res: Response) => {
+  try {
+    const body = req.body as WhatsAppInboundMessage;
+
+    // Log the raw payload for debugging
+    console.log('Webhook received:', JSON.stringify(body, null, 2));
+
+    // Always respond 200 immediately to acknowledge receipt
+    res.sendStatus(200);
+
+    // Process the message asynchronously
+    await processWebhook(body);
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    // Still return 200 to prevent Meta from retrying
+    res.sendStatus(200);
+  }
+});
+
+async function processWebhook(body: WhatsAppInboundMessage): Promise<void> {
+  if (body.object !== 'whatsapp_business_account') {
+    console.log('Not a WhatsApp Business webhook, ignoring');
+    return;
+  }
+
+  for (const entry of body.entry) {
+    for (const change of entry.changes) {
+      const value = change.value;
+
+      // Handle status updates (delivery receipts)
+      if (value.statuses) {
+        for (const status of value.statuses) {
+          console.log(`Message ${status.id} status: ${status.status}`);
+        }
+        continue;
+      }
+
+      // Handle incoming messages
+      if (value.messages && value.contacts) {
+        for (let i = 0; i < value.messages.length; i++) {
+          const message = value.messages[i];
+          const contact = value.contacts[i];
+
+          if (message.type === 'text' && message.text) {
+            await handleInboundMessage(
+              message.from,
+              message.text.body,
+              contact?.profile?.name,
+              body
+            );
+          } else {
+            console.log(`Received non-text message type: ${message.type}`);
+            // Respond with menu for unsupported message types
+            await handleInboundMessage(
+              message.from,
+              'MENU',
+              contact?.profile?.name,
+              body
+            );
+          }
+        }
+      }
+    }
+  }
+}
+
+async function handleInboundMessage(
+  phoneNumber: string,
+  messageText: string,
+  senderName: string | undefined,
+  rawPayload: WhatsAppInboundMessage
+): Promise<void> {
+  try {
+    console.log(`Processing message from ${phoneNumber}: "${messageText}"`);
+
+    // Find or create the guest
+    await findOrCreateGuest(phoneNumber, senderName);
+
+    // Log the inbound message
+    await logMessage(phoneNumber, 'inbound', messageText, rawPayload as unknown as Record<string, unknown>);
+
+    // Generate response using bot menu router
+    const responseText = await handleMessage(phoneNumber, messageText);
+
+    // Send the response
+    await sendTextMessage({ to: phoneNumber, text: responseText });
+
+    // Log the outbound message
+    await logMessage(phoneNumber, 'outbound', responseText);
+
+    console.log(`Response sent to ${phoneNumber}`);
+  } catch (error) {
+    console.error(`Error handling message from ${phoneNumber}:`, error);
+
+    // Try to send an error message
+    try {
+      await sendTextMessage({
+        to: phoneNumber,
+        text: 'Sorry, something went wrong. Please try again.',
+      });
+    } catch (sendError) {
+      console.error('Failed to send error message:', sendError);
+    }
+  }
+}
+
+export default router;
