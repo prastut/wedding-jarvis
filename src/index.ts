@@ -1,8 +1,9 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import session from 'express-session';
 import { config, validateConfig } from './config';
 import webhookRouter from './routes/webhook';
-import testRouter from './routes/test';
+import authRouter from './routes/auth';
 
 const app = express();
 
@@ -13,7 +14,22 @@ app.use(express.json({
   },
 }));
 
-app.use(cors());
+app.use(cors({
+  origin: true,
+  credentials: true,
+}));
+
+// Session middleware
+app.use(session({
+  secret: config.session.secret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: config.nodeEnv === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  },
+}));
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {
@@ -23,8 +39,8 @@ app.get('/health', (_req: Request, res: Response) => {
 // WhatsApp webhook routes
 app.use('/webhook', webhookRouter);
 
-// Test routes (remove after Phase 3 validation)
-app.use('/api/test', testRouter);
+// Auth routes
+app.use('/api/auth', authRouter);
 
 // Error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
