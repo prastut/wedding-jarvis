@@ -7,6 +7,9 @@ import authRouter from './routes/auth';
 
 const app = express();
 
+// Trust proxy (required for Railway/Heroku/etc behind reverse proxy)
+app.set('trust proxy', 1);
+
 // Store raw body for webhook signature verification
 app.use(express.json({
   verify: (req: Request & { rawBody?: Buffer }, _res, buf) => {
@@ -28,6 +31,7 @@ app.use(session({
     secure: config.nodeEnv === 'production',
     httpOnly: true,
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: config.nodeEnv === 'production' ? 'none' : 'lax',
   },
 }));
 
