@@ -20,11 +20,11 @@ function setCache(key: string, data: string): void {
 
 const MAIN_MENU = `Welcome! Reply with a number:
 
-1 - Event Schedule
-2 - Venues & Directions
-3 - Dress Codes
-4 - FAQs
-5 - Contact Coordinator
+1 - Wedding Location Guide
+2 - Dress Code
+3 - Schedule
+4 - FAQ
+5 - Emergency Contact
 
 Reply STOP to unsubscribe.`;
 
@@ -52,13 +52,13 @@ export async function handleMessage(phoneNumber: string, messageText: string): P
       return MAIN_MENU;
 
     case '1':
-      return await getEventSchedule();
-
-    case '2':
       return await getVenuesAndDirections();
 
-    case '3':
+    case '2':
       return await getDressCodes();
+
+    case '3':
+      return await getEventSchedule();
 
     case '4':
       return await getFAQs();
@@ -90,7 +90,7 @@ async function getEventSchedule(): Promise<string> {
     .order('sort_order', { ascending: true });
 
   if (error || !events || events.length === 0) {
-    return 'No events scheduled yet. Check back soon!\n\nReply 0 for menu.';
+    return 'Schedule coming soon!\n\nReply 0 for menu.';
   }
 
   const eventList = events.map((event: Event & { venues?: { name: string } }) => {
@@ -109,7 +109,7 @@ async function getEventSchedule(): Promise<string> {
     return `*${event.name}*\n${dateStr} at ${timeStr}${venue ? `\nVenue: ${venue}` : ''}`;
   }).join('\n\n');
 
-  const result = `*Event Schedule*\n\n${eventList}\n\nReply 0 for menu.`;
+  const result = `*Schedule*\n\n${eventList}\n\nReply 0 for menu.`;
   setCache('events', result);
   return result;
 }
@@ -125,7 +125,7 @@ async function getVenuesAndDirections(): Promise<string> {
     .order('name', { ascending: true });
 
   if (error || !venues || venues.length === 0) {
-    return 'Venue information coming soon!\n\nReply 0 for menu.';
+    return 'Wedding location guide coming soon!\n\nReply 0 for menu.';
   }
 
   const venueList = venues.map((venue: Venue) => {
@@ -139,7 +139,7 @@ async function getVenuesAndDirections(): Promise<string> {
     return text;
   }).join('\n\n');
 
-  const result = `*Venues & Directions*\n\n${venueList}\n\nReply 0 for menu.`;
+  const result = `*Wedding Location Guide*\n\n${venueList}\n\nReply 0 for menu.`;
   setCache('venues', result);
   return result;
 }
@@ -163,7 +163,7 @@ async function getDressCodes(): Promise<string> {
     return `*${event.name}*\n${event.dress_code}`;
   }).join('\n\n');
 
-  const result = `*Dress Codes*\n\n${dressCodes}\n\nReply 0 for menu.`;
+  const result = `*Dress Code*\n\n${dressCodes}\n\nReply 0 for menu.`;
   setCache('dresscodes', result);
   return result;
 }
@@ -186,7 +186,7 @@ async function getFAQs(): Promise<string> {
     return `*Q: ${faq.question}*\nA: ${faq.answer}`;
   }).join('\n\n');
 
-  const result = `*Frequently Asked Questions*\n\n${faqList}\n\nReply 0 for menu.`;
+  const result = `*FAQ*\n\n${faqList}\n\nReply 0 for menu.`;
   setCache('faqs', result);
   return result;
 }
@@ -210,7 +210,7 @@ async function getCoordinatorContact(): Promise<string> {
       .limit(1);
 
     if (!anyContact || anyContact.length === 0) {
-      return 'Coordinator contact information coming soon!\n\nReply 0 for menu.';
+      return 'Emergency contact coming soon!\n\nReply 0 for menu.';
     }
 
     const contact = anyContact[0] as CoordinatorContact;
@@ -226,7 +226,7 @@ async function getCoordinatorContact(): Promise<string> {
 }
 
 function formatContactInfo(contact: CoordinatorContact): string {
-  let text = `*Contact Coordinator*\n\n${contact.name}`;
+  let text = `*Emergency Contact*\n\n${contact.name}`;
   if (contact.role) {
     text += ` (${contact.role})`;
   }
