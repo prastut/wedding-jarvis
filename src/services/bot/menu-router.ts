@@ -163,7 +163,7 @@ async function getDressCodes(): Promise<string> {
     return `*${event.name}*\n${event.dress_code}`;
   }).join('\n\n');
 
-  const result = `*Dress Code*\n\n${dressCodes}\n\nReply 0 for menu.`;
+  const result = `*Dress Code*\n\n${dressCodes}\n\nView color palettes: https://wedding-jarvis-production.up.railway.app/dress-code\n\nReply 0 for menu.`;
   setCache('dresscodes', result);
   return result;
 }
