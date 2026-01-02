@@ -10,8 +10,8 @@
 | 2 | Minimal WhatsApp Integration | ✅ Complete |
 | 3 | Loop Test | ✅ Complete |
 | 4 | Full Bot Logic | ✅ Complete |
-| 5 | Admin Backend | 🔄 In Progress |
-| 6 | Admin Frontend (React) | ⏳ Pending |
+| 5 | Admin Backend | ✅ Complete |
+| 6 | Admin Frontend (React) | 🔄 In Progress |
 | 7 | Production Hardening | ⏳ Pending |
 | 8 | Go-Live | ⏳ Pending |
 
@@ -68,19 +68,19 @@
 
 ---
 
-## Phase 5: Admin Backend 🔄
+## Phase 5: Admin Backend ✅
 
 - [x] Session-based authentication
 - [x] Login/logout endpoints
-- [ ] Dashboard stats endpoint
-- [ ] Guest list endpoint (filters, pagination)
-- [ ] CSV export endpoint
-- [ ] Broadcast CRUD endpoints
-- [ ] Broadcast execution with rate limiting
+- [x] Dashboard stats endpoint
+- [x] Guest list endpoint (filters, pagination)
+- [x] CSV export endpoint
+- [x] Broadcast CRUD endpoints
+- [x] Broadcast execution with rate limiting
 
 ---
 
-## Phase 6: Admin Frontend ⏳
+## Phase 6: Admin Frontend 🔄
 
 - [ ] Login page
 - [ ] Dashboard with stats
