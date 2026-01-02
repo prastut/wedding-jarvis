@@ -4,6 +4,7 @@ import session from 'express-session';
 import { config, validateConfig } from './config';
 import webhookRouter from './routes/webhook';
 import authRouter from './routes/auth';
+import adminRouter from './routes/admin';
 
 const app = express();
 
@@ -45,6 +46,9 @@ app.use('/webhook', webhookRouter);
 
 // Auth routes
 app.use('/api/auth', authRouter);
+
+// Admin routes
+app.use('/api/admin', adminRouter);
 
 // Error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {

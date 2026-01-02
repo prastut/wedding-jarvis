@@ -70,8 +70,8 @@
 
 ## Phase 5: Admin Backend 🔄
 
-- [ ] Session-based authentication
-- [ ] Login/logout endpoints
+- [x] Session-based authentication
+- [x] Login/logout endpoints
 - [ ] Dashboard stats endpoint
 - [ ] Guest list endpoint (filters, pagination)
 - [ ] CSV export endpoint
