@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Guests from './pages/Guests';
 import Broadcasts from './pages/Broadcasts';
+import DressCode from './pages/DressCode';
 import './App.css';
 
 function AppRoutes() {
@@ -17,6 +18,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/dress-code" element={<DressCode />} />
       <Route
         path="/login"
         element={user ? <Navigate to="/" replace /> : <Login />}
