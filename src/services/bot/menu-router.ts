@@ -1,6 +1,23 @@
 import { getSupabase } from '../../db/client';
 import type { Event, Venue, FAQ, CoordinatorContact } from '../../types';
 
+// Simple in-memory cache (5 minute TTL)
+const cache: Map<string, { data: string; expires: number }> = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCached(key: string): string | null {
+  const entry = cache.get(key);
+  if (entry && entry.expires > Date.now()) {
+    return entry.data;
+  }
+  cache.delete(key);
+  return null;
+}
+
+function setCache(key: string, data: string): void {
+  cache.set(key, { data, expires: Date.now() + CACHE_TTL });
+}
+
 const MAIN_MENU = `Welcome! Reply with a number:
 
 1 - Event Schedule
@@ -63,6 +80,9 @@ async function updateOptIn(phoneNumber: string, optedIn: boolean): Promise<void>
 }
 
 async function getEventSchedule(): Promise<string> {
+  const cached = getCached('events');
+  if (cached) return cached;
+
   const supabase = getSupabase();
   const { data: events, error } = await supabase
     .from('events')
@@ -89,10 +109,15 @@ async function getEventSchedule(): Promise<string> {
     return `*${event.name}*\n${dateStr} at ${timeStr}${venue ? `\nVenue: ${venue}` : ''}`;
   }).join('\n\n');
 
-  return `*Event Schedule*\n\n${eventList}\n\nReply 0 for menu.`;
+  const result = `*Event Schedule*\n\n${eventList}\n\nReply 0 for menu.`;
+  setCache('events', result);
+  return result;
 }
 
 async function getVenuesAndDirections(): Promise<string> {
+  const cached = getCached('venues');
+  if (cached) return cached;
+
   const supabase = getSupabase();
   const { data: venues, error } = await supabase
     .from('venues')
@@ -114,10 +139,15 @@ async function getVenuesAndDirections(): Promise<string> {
     return text;
   }).join('\n\n');
 
-  return `*Venues & Directions*\n\n${venueList}\n\nReply 0 for menu.`;
+  const result = `*Venues & Directions*\n\n${venueList}\n\nReply 0 for menu.`;
+  setCache('venues', result);
+  return result;
 }
 
 async function getDressCodes(): Promise<string> {
+  const cached = getCached('dresscodes');
+  if (cached) return cached;
+
   const supabase = getSupabase();
   const { data: events, error } = await supabase
     .from('events')
@@ -133,10 +163,15 @@ async function getDressCodes(): Promise<string> {
     return `*${event.name}*\n${event.dress_code}`;
   }).join('\n\n');
 
-  return `*Dress Codes*\n\n${dressCodes}\n\nReply 0 for menu.`;
+  const result = `*Dress Codes*\n\n${dressCodes}\n\nReply 0 for menu.`;
+  setCache('dresscodes', result);
+  return result;
 }
 
 async function getFAQs(): Promise<string> {
+  const cached = getCached('faqs');
+  if (cached) return cached;
+
   const supabase = getSupabase();
   const { data: faqs, error } = await supabase
     .from('faqs')
@@ -151,10 +186,15 @@ async function getFAQs(): Promise<string> {
     return `*Q: ${faq.question}*\nA: ${faq.answer}`;
   }).join('\n\n');
 
-  return `*Frequently Asked Questions*\n\n${faqList}\n\nReply 0 for menu.`;
+  const result = `*Frequently Asked Questions*\n\n${faqList}\n\nReply 0 for menu.`;
+  setCache('faqs', result);
+  return result;
 }
 
 async function getCoordinatorContact(): Promise<string> {
+  const cached = getCached('coordinator');
+  if (cached) return cached;
+
   const supabase = getSupabase();
   const { data: contacts, error } = await supabase
     .from('coordinator_contacts')
@@ -174,11 +214,15 @@ async function getCoordinatorContact(): Promise<string> {
     }
 
     const contact = anyContact[0] as CoordinatorContact;
-    return formatContactInfo(contact);
+    const result = formatContactInfo(contact);
+    setCache('coordinator', result);
+    return result;
   }
 
   const contact = contacts[0] as CoordinatorContact;
-  return formatContactInfo(contact);
+  const result = formatContactInfo(contact);
+  setCache('coordinator', result);
+  return result;
 }
 
 function formatContactInfo(contact: CoordinatorContact): string {

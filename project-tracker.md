@@ -122,5 +122,6 @@ _None currently_
 | Service | Status | URL/Details |
 |---------|--------|-------------|
 | Railway | ✅ Deployed | wedding-jarvis-production.up.railway.app |
+| Admin Panel | ✅ Live | https://wedding-jarvis-production.up.railway.app/ |
 | Supabase | ✅ Running | _add project URL here_ |
 | Meta WABA | ✅ Configured | Webhooks verified |

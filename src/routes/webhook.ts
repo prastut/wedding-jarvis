@@ -101,22 +101,24 @@ async function handleInboundMessage(
   try {
     console.log(`Processing message from ${phoneNumber}: "${messageText}"`);
 
-    // Find or create the guest
-    await findOrCreateGuest(phoneNumber, senderName);
+    // Run guest lookup and inbound logging in parallel (non-blocking for response)
+    const guestPromise = findOrCreateGuest(phoneNumber, senderName);
+    const inboundLogPromise = logMessage(phoneNumber, 'inbound', messageText, rawPayload as unknown as Record<string, unknown>);
 
-    // Log the inbound message
-    await logMessage(phoneNumber, 'inbound', messageText, rawPayload as unknown as Record<string, unknown>);
+    // Wait for guest (needed for opt-in status) but don't wait for log
+    await guestPromise;
 
     // Generate response using bot menu router
     const responseText = await handleMessage(phoneNumber, messageText);
 
-    // Send the response
+    // Send the response immediately
     await sendTextMessage({ to: phoneNumber, text: responseText });
 
-    // Log the outbound message
-    await logMessage(phoneNumber, 'outbound', responseText);
-
     console.log(`Response sent to ${phoneNumber}`);
+
+    // Log outbound message in background (fire and forget)
+    Promise.all([inboundLogPromise, logMessage(phoneNumber, 'outbound', responseText)])
+      .catch(err => console.error('Logging error:', err));
   } catch (error) {
     console.error(`Error handling message from ${phoneNumber}:`, error);
 
