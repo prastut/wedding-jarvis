@@ -1,11 +1,36 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import session from 'express-session';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { config, validateConfig } from './config';
 import webhookRouter from './routes/webhook';
 import authRouter from './routes/auth';
 import adminRouter from './routes/admin';
+
+// Rate limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 attempts per window
+  message: { error: 'Too many login attempts, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 100, // 100 requests per minute
+  message: { error: 'Too many requests, please slow down' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 500, // Higher limit for Meta webhooks
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Admin panel static files path
 const ADMIN_DIST = path.join(__dirname, '../admin-panel/dist');
@@ -46,21 +71,28 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 // WhatsApp webhook routes
-app.use('/webhook', webhookRouter);
+app.use('/webhook', webhookLimiter, webhookRouter);
 
-// Auth routes
-app.use('/api/auth', authRouter);
+// Auth routes (stricter rate limit)
+app.use('/api/auth', authLimiter, authRouter);
 
 // Admin routes
-app.use('/api/admin', adminRouter);
+app.use('/api/admin', apiLimiter, adminRouter);
 
 // Serve admin panel static files
 app.use(express.static(ADMIN_DIST));
 
 // Error handling middleware
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Unhandled error:', err);
-  res.status(500).json({ error: 'Internal server error' });
+app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  const errorId = Date.now().toString(36);
+  console.error(`[${errorId}] Unhandled error on ${req.method} ${req.path}:`, err);
+
+  // Don't leak error details in production
+  if (config.nodeEnv === 'production') {
+    res.status(500).json({ error: 'Internal server error', errorId });
+  } else {
+    res.status(500).json({ error: err.message, stack: err.stack, errorId });
+  }
 });
 
 // SPA fallback - serve index.html for non-API routes
@@ -72,6 +104,16 @@ app.use((req: Request, res: Response) => {
   }
   // Serve index.html for SPA routes
   res.sendFile(path.join(ADMIN_DIST, 'index.html'));
+});
+
+// Process-level error handlers
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 // Start server

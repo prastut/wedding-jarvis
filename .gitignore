@@ -24,3 +24,9 @@ npm-debug.log*
 # Admin panel
 admin-panel/node_modules/
 admin-panel/dist/
+
+# Security
+security_audit_1.md
+
+# Assets
+*.pdf

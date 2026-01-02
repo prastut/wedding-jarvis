@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
+import crypto from 'crypto';
 import { config } from '../config';
 import { sendTextMessage } from '../services/whatsapp/client';
 import { handleMessage } from '../services/bot/menu-router';
@@ -7,6 +8,43 @@ import { logMessage } from '../repositories/message-logs';
 import type { WhatsAppInboundMessage } from '../types';
 
 const router = Router();
+
+// Webhook signature validation middleware
+function validateSignature(req: Request & { rawBody?: Buffer }, res: Response, next: NextFunction): void {
+  // Skip validation if app secret is not configured
+  if (!config.whatsapp.appSecret) {
+    console.warn('WHATSAPP_APP_SECRET not configured - skipping signature validation');
+    next();
+    return;
+  }
+
+  const signature = req.headers['x-hub-signature-256'] as string;
+  if (!signature) {
+    console.error('Missing X-Hub-Signature-256 header');
+    res.sendStatus(401);
+    return;
+  }
+
+  const rawBody = req.rawBody;
+  if (!rawBody) {
+    console.error('Raw body not available for signature validation');
+    res.sendStatus(400);
+    return;
+  }
+
+  const expectedSignature = 'sha256=' + crypto
+    .createHmac('sha256', config.whatsapp.appSecret)
+    .update(rawBody)
+    .digest('hex');
+
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+    console.error('Invalid webhook signature');
+    res.sendStatus(401);
+    return;
+  }
+
+  next();
+}
 
 // GET /webhook - Verification challenge from Meta
 router.get('/', (req: Request, res: Response) => {
@@ -26,7 +64,7 @@ router.get('/', (req: Request, res: Response) => {
 });
 
 // POST /webhook - Receive inbound messages
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', validateSignature, async (req: Request, res: Response) => {
   try {
     const body = req.body as WhatsAppInboundMessage;
 
