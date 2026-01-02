@@ -42,7 +42,18 @@ app.use(session({
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const fs = require('fs');
+  const adminExists = fs.existsSync(ADMIN_DIST);
+  const indexExists = fs.existsSync(path.join(ADMIN_DIST, 'index.html'));
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    adminPanel: {
+      path: ADMIN_DIST,
+      exists: adminExists,
+      indexExists: indexExists,
+    },
+  });
 });
 
 // WhatsApp webhook routes
