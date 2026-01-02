@@ -11,8 +11,8 @@
 | 3 | Loop Test | ✅ Complete |
 | 4 | Full Bot Logic | ✅ Complete |
 | 5 | Admin Backend | ✅ Complete |
-| 6 | Admin Frontend (React) | 🔄 In Progress |
-| 7 | Production Hardening | ⏳ Pending |
+| 6 | Admin Frontend (React) | ✅ Complete |
+| 7 | Production Hardening | 🔄 In Progress |
 | 8 | Go-Live | ⏳ Pending |
 
 ---
@@ -80,17 +80,17 @@
 
 ---
 
-## Phase 6: Admin Frontend 🔄
+## Phase 6: Admin Frontend ✅
 
-- [ ] Login page
-- [ ] Dashboard with stats
-- [ ] Guests table with filters
-- [ ] Broadcast page (create, preview, send, history)
-- [ ] Content editor (events/venues/FAQs)
+- [x] Login page
+- [x] Dashboard with stats
+- [x] Guests table with filters
+- [x] Broadcast page (create, preview, send, history)
+- [ ] Content editor (events/venues/FAQs) - optional
 
 ---
 
-## Phase 7: Production Hardening ⏳
+## Phase 7: Production Hardening 🔄
 
 - [ ] Webhook signature validation
 - [ ] Rate limiting on all endpoints
