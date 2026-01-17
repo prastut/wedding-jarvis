@@ -27,10 +27,7 @@ export async function sendBroadcast(broadcastId: string): Promise<BroadcastResul
   }
 
   // Update status to sending
-  await supabase
-    .from('broadcasts')
-    .update({ status: 'sending' })
-    .eq('id', broadcastId);
+  await supabase.from('broadcasts').update({ status: 'sending' }).eq('id', broadcastId);
 
   // Get all opted-in guests
   const guests = await getOptedInGuests();

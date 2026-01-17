@@ -73,10 +73,7 @@ export async function handleMessage(phoneNumber: string, messageText: string): P
 
 async function updateOptIn(phoneNumber: string, optedIn: boolean): Promise<void> {
   const supabase = getSupabase();
-  await supabase
-    .from('guests')
-    .update({ opted_in: optedIn })
-    .eq('phone_number', phoneNumber);
+  await supabase.from('guests').update({ opted_in: optedIn }).eq('phone_number', phoneNumber);
 }
 
 async function getEventSchedule(): Promise<string> {
@@ -93,21 +90,23 @@ async function getEventSchedule(): Promise<string> {
     return 'Schedule coming soon!\n\nReply 0 for menu.';
   }
 
-  const eventList = events.map((event: Event & { venues?: { name: string } }) => {
-    const date = new Date(event.start_time);
-    const dateStr = date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    });
-    const timeStr = date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-    const venue = event.venues?.name || '';
+  const eventList = events
+    .map((event: Event & { venues?: { name: string } }) => {
+      const date = new Date(event.start_time);
+      const dateStr = date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+      });
+      const timeStr = date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+      const venue = event.venues?.name || '';
 
-    return `*${event.name}*\n${dateStr} at ${timeStr}${venue ? `\nVenue: ${venue}` : ''}`;
-  }).join('\n\n');
+      return `*${event.name}*\n${dateStr} at ${timeStr}${venue ? `\nVenue: ${venue}` : ''}`;
+    })
+    .join('\n\n');
 
   const result = `*Schedule*\n\n${eventList}\n\nReply 0 for menu.`;
   setCache('events', result);
@@ -128,16 +127,18 @@ async function getVenuesAndDirections(): Promise<string> {
     return 'Wedding location guide coming soon!\n\nReply 0 for menu.';
   }
 
-  const venueList = venues.map((venue: Venue) => {
-    let text = `*${venue.name}*\n${venue.address}`;
-    if (venue.google_maps_link) {
-      text += `\nMap: ${venue.google_maps_link}`;
-    }
-    if (venue.parking_info) {
-      text += `\nParking: ${venue.parking_info}`;
-    }
-    return text;
-  }).join('\n\n');
+  const venueList = venues
+    .map((venue: Venue) => {
+      let text = `*${venue.name}*\n${venue.address}`;
+      if (venue.google_maps_link) {
+        text += `\nMap: ${venue.google_maps_link}`;
+      }
+      if (venue.parking_info) {
+        text += `\nParking: ${venue.parking_info}`;
+      }
+      return text;
+    })
+    .join('\n\n');
 
   const result = `*Wedding Location Guide*\n\n${venueList}\n\nReply 0 for menu.`;
   setCache('venues', result);
@@ -159,9 +160,11 @@ async function getDressCodes(): Promise<string> {
     return 'Dress code information coming soon!\n\nReply 0 for menu.';
   }
 
-  const dressCodes = events.map((event: Pick<Event, 'name' | 'dress_code'>) => {
-    return `*${event.name}*\n${event.dress_code}`;
-  }).join('\n\n');
+  const dressCodes = events
+    .map((event: Pick<Event, 'name' | 'dress_code'>) => {
+      return `*${event.name}*\n${event.dress_code}`;
+    })
+    .join('\n\n');
 
   const result = `*Dress Code*\n\n${dressCodes}\n\nView color palettes: https://wedding-jarvis-production.up.railway.app/dress-code\n\nReply 0 for menu.`;
   setCache('dresscodes', result);
@@ -182,9 +185,11 @@ async function getFAQs(): Promise<string> {
     return 'FAQs coming soon!\n\nReply 0 for menu.';
   }
 
-  const faqList = faqs.map((faq: FAQ) => {
-    return `*Q: ${faq.question}*\nA: ${faq.answer}`;
-  }).join('\n\n');
+  const faqList = faqs
+    .map((faq: FAQ) => {
+      return `*Q: ${faq.question}*\nA: ${faq.answer}`;
+    })
+    .join('\n\n');
 
   const result = `*FAQ*\n\n${faqList}\n\nReply 0 for menu.`;
   setCache('faqs', result);
@@ -204,10 +209,7 @@ async function getCoordinatorContact(): Promise<string> {
 
   if (error || !contacts || contacts.length === 0) {
     // Fallback to any coordinator
-    const { data: anyContact } = await supabase
-      .from('coordinator_contacts')
-      .select('*')
-      .limit(1);
+    const { data: anyContact } = await supabase.from('coordinator_contacts').select('*').limit(1);
 
     if (!anyContact || anyContact.length === 0) {
       return 'Emergency contact coming soon!\n\nReply 0 for menu.';

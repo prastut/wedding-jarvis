@@ -15,7 +15,11 @@ router.get('/', (req: Request, res: Response) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  console.log('Webhook verification request:', { mode, token, challenge: challenge?.toString().substring(0, 20) });
+  console.log('Webhook verification request:', {
+    mode,
+    token,
+    challenge: challenge?.toString().substring(0, 20),
+  });
 
   if (mode === 'subscribe' && token === config.whatsapp.verifyToken) {
     console.log('Webhook verified successfully');
@@ -77,15 +81,37 @@ async function processWebhook(body: WhatsAppInboundMessage): Promise<void> {
               contact?.profile?.name,
               body
             );
+          } else if (message.type === 'interactive' && message.interactive) {
+            // Handle button and list replies
+            const interactive = message.interactive;
+
+            if (interactive.button_reply) {
+              console.log(
+                `[INTERACTIVE] Button reply from ${message.from}: id="${interactive.button_reply.id}" title="${interactive.button_reply.title}"`
+              );
+              await handleInboundMessage(
+                message.from,
+                `BUTTON:${interactive.button_reply.id}`,
+                contact?.profile?.name,
+                body,
+                interactive.button_reply.id
+              );
+            } else if (interactive.list_reply) {
+              console.log(
+                `[INTERACTIVE] List reply from ${message.from}: id="${interactive.list_reply.id}" title="${interactive.list_reply.title}"`
+              );
+              await handleInboundMessage(
+                message.from,
+                `LIST:${interactive.list_reply.id}`,
+                contact?.profile?.name,
+                body,
+                interactive.list_reply.id
+              );
+            }
           } else {
             console.log(`Received non-text message type: ${message.type}`);
             // Respond with menu for unsupported message types
-            await handleInboundMessage(
-              message.from,
-              'MENU',
-              contact?.profile?.name,
-              body
-            );
+            await handleInboundMessage(message.from, 'MENU', contact?.profile?.name, body);
           }
         }
       }
@@ -97,14 +123,23 @@ async function handleInboundMessage(
   phoneNumber: string,
   messageText: string,
   senderName: string | undefined,
-  rawPayload: WhatsAppInboundMessage
+  rawPayload: WhatsAppInboundMessage,
+  interactiveId?: string
 ): Promise<void> {
   try {
     console.log(`Processing message from ${phoneNumber}: "${messageText}"`);
+    if (interactiveId) {
+      console.log(`[INTERACTIVE] Processing interactive ID: ${interactiveId}`);
+    }
 
     // Run guest lookup and inbound logging in parallel (non-blocking for response)
     const guestPromise = findOrCreateGuest(phoneNumber, senderName);
-    const inboundLogPromise = logMessage(phoneNumber, 'inbound', messageText, rawPayload as unknown as Record<string, unknown>);
+    const inboundLogPromise = logMessage(
+      phoneNumber,
+      'inbound',
+      messageText,
+      rawPayload as unknown as Record<string, unknown>
+    );
 
     // Wait for guest (needed for opt-in status) but don't wait for log
     await guestPromise;
@@ -118,8 +153,9 @@ async function handleInboundMessage(
     console.log(`Response sent to ${phoneNumber}`);
 
     // Log outbound message in background (fire and forget)
-    Promise.all([inboundLogPromise, logMessage(phoneNumber, 'outbound', responseText)])
-      .catch(err => console.error('Logging error:', err));
+    Promise.all([inboundLogPromise, logMessage(phoneNumber, 'outbound', responseText)]).catch(
+      (err) => console.error('Logging error:', err)
+    );
   } catch (error) {
     console.error(`Error handling message from ${phoneNumber}:`, error);
 

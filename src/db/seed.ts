@@ -11,7 +11,10 @@ async function seed() {
   await supabase.from('events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabase.from('venues').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabase.from('faqs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-  await supabase.from('coordinator_contacts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await supabase
+    .from('coordinator_contacts')
+    .delete()
+    .neq('id', '00000000-0000-0000-0000-000000000000');
 
   // Insert Venues
   console.log('Inserting venues...');
@@ -39,8 +42,8 @@ async function seed() {
   }
   console.log(`  Inserted ${venues.length} venues`);
 
-  const leaf9Id = venues.find(v => v.name === 'Hotel Leaf 9 INN')?.id;
-  const gardenId = venues.find(v => v.name === 'The Garden Terrace')?.id;
+  const leaf9Id = venues.find((v) => v.name === 'Hotel Leaf 9 INN')?.id;
+  const gardenId = venues.find((v) => v.name === 'The Garden Terrace')?.id;
 
   // Insert Events
   console.log('Inserting events...');
@@ -95,19 +98,22 @@ async function seed() {
     .insert([
       {
         question: 'Can I bring a plus one?',
-        answer: 'Please check your invitation for the number of guests included. If you need to bring an additional guest, kindly contact the wedding coordinator.',
+        answer:
+          'Please check your invitation for the number of guests included. If you need to bring an additional guest, kindly contact the wedding coordinator.',
         category: 'General',
         sort_order: 1,
       },
       {
         question: 'Is there parking available?',
-        answer: 'Yes, valet parking is available at Hotel Leaf 9 INN. Please inform the attendant at the entrance.',
+        answer:
+          'Yes, valet parking is available at Hotel Leaf 9 INN. Please inform the attendant at the entrance.',
         category: 'Venue',
         sort_order: 2,
       },
       {
         question: 'Will there be vegetarian food options?',
-        answer: 'Yes! We will have a variety of vegetarian and non-vegetarian options at all events.',
+        answer:
+          'Yes! We will have a variety of vegetarian and non-vegetarian options at all events.',
         category: 'Food',
         sort_order: 3,
       },
@@ -119,13 +125,15 @@ async function seed() {
       },
       {
         question: 'Is there accommodation available?',
-        answer: 'Yes, rooms are available at Hotel Leaf 9 INN. Please contact the coordinator to book.',
+        answer:
+          'Yes, rooms are available at Hotel Leaf 9 INN. Please contact the coordinator to book.',
         category: 'Accommodation',
         sort_order: 5,
       },
       {
         question: 'Can I take photos during the ceremony?',
-        answer: 'We have professional photographers covering all events. Feel free to take photos, but please avoid using flash during the main ceremonies.',
+        answer:
+          'We have professional photographers covering all events. Feel free to take photos, but please avoid using flash during the main ceremonies.',
         category: 'General',
         sort_order: 6,
       },

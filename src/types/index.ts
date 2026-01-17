@@ -100,6 +100,27 @@ export interface SystemSetting {
 }
 
 // WhatsApp API types
+export interface WhatsAppInteractiveReply {
+  button_reply?: {
+    id: string;
+    title: string;
+  };
+  list_reply?: {
+    id: string;
+    title: string;
+    description?: string;
+  };
+}
+
+export interface WhatsAppMessage {
+  from: string;
+  id: string;
+  timestamp: string;
+  type: string;
+  text?: { body: string };
+  interactive?: WhatsAppInteractiveReply;
+}
+
 export interface WhatsAppInboundMessage {
   object: string;
   entry: Array<{
@@ -115,13 +136,7 @@ export interface WhatsAppInboundMessage {
           profile: { name: string };
           wa_id: string;
         }>;
-        messages?: Array<{
-          from: string;
-          id: string;
-          timestamp: string;
-          type: string;
-          text?: { body: string };
-        }>;
+        messages?: WhatsAppMessage[];
         statuses?: Array<{
           id: string;
           status: string;

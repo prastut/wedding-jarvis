@@ -28,11 +28,7 @@ export async function listBroadcasts(
 
 export async function getBroadcastById(id: string): Promise<Broadcast | null> {
   const supabase = getSupabase();
-  const { data, error } = await supabase
-    .from('broadcasts')
-    .select('*')
-    .eq('id', id)
-    .single();
+  const { data, error } = await supabase.from('broadcasts').select('*').eq('id', id).single();
 
   if (error) {
     if (error.code === 'PGRST116') {
@@ -92,10 +88,7 @@ export async function updateBroadcast(
 export async function deleteBroadcast(id: string): Promise<void> {
   const supabase = getSupabase();
 
-  const { error } = await supabase
-    .from('broadcasts')
-    .delete()
-    .eq('id', id);
+  const { error } = await supabase.from('broadcasts').delete().eq('id', id);
 
   if (error) {
     throw new Error(`Failed to delete broadcast: ${error.message}`);
@@ -113,10 +106,7 @@ export async function updateBroadcastStatus(
   if (counts?.sent_count !== undefined) updates.sent_count = counts.sent_count;
   if (counts?.failed_count !== undefined) updates.failed_count = counts.failed_count;
 
-  const { error } = await supabase
-    .from('broadcasts')
-    .update(updates)
-    .eq('id', id);
+  const { error } = await supabase.from('broadcasts').update(updates).eq('id', id);
 
   if (error) {
     throw new Error(`Failed to update broadcast status: ${error.message}`);

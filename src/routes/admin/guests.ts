@@ -9,8 +9,8 @@ router.get('/', async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;
     const search = req.query.search as string | undefined;
-    const optedIn = req.query.opted_in === 'true' ? true :
-                    req.query.opted_in === 'false' ? false : undefined;
+    const optedIn =
+      req.query.opted_in === 'true' ? true : req.query.opted_in === 'false' ? false : undefined;
 
     const offset = (page - 1) * limit;
 
@@ -39,14 +39,14 @@ router.get('/', async (req: Request, res: Response) => {
 // GET /api/admin/guests/export - Export guests as CSV
 router.get('/export', async (req: Request, res: Response) => {
   try {
-    const optedIn = req.query.opted_in === 'true' ? true :
-                    req.query.opted_in === 'false' ? false : undefined;
+    const optedIn =
+      req.query.opted_in === 'true' ? true : req.query.opted_in === 'false' ? false : undefined;
 
     const { guests } = await getAllGuests({ limit: 10000, optedIn });
 
     // Build CSV
     const headers = ['phone_number', 'name', 'opted_in', 'first_seen_at', 'last_inbound_at'];
-    const rows = guests.map(g => [
+    const rows = guests.map((g) => [
       g.phone_number,
       g.name || '',
       g.opted_in ? 'Yes' : 'No',
@@ -56,7 +56,7 @@ router.get('/export', async (req: Request, res: Response) => {
 
     const csv = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
     ].join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
