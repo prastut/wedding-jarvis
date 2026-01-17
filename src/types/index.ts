@@ -1,3 +1,15 @@
+// Language codes supported by the bot
+export type UserLanguage = 'EN' | 'HI' | 'PA';
+
+// Side selection (Groom or Bride family)
+export type UserSide = 'GROOM' | 'BRIDE';
+
+// Side for events and contacts (includes BOTH for shared items)
+export type ContentSide = 'GROOM' | 'BRIDE' | 'BOTH';
+
+// RSVP status
+export type RsvpStatus = 'YES' | 'NO';
+
 export interface Guest {
   id: string;
   phone_number: string;
@@ -6,6 +18,10 @@ export interface Guest {
   first_seen_at: string;
   last_inbound_at: string | null;
   tags: string[];
+  user_language: UserLanguage | null;
+  user_side: UserSide | null;
+  rsvp_status: RsvpStatus | null;
+  rsvp_guest_count: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -13,10 +29,15 @@ export interface Guest {
 export interface Event {
   id: string;
   name: string;
+  name_hi: string | null;
+  name_pa: string | null;
   description: string | null;
   start_time: string;
   venue_id: string | null;
   dress_code: string | null;
+  dress_code_hi: string | null;
+  dress_code_pa: string | null;
+  side: ContentSide;
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -26,8 +47,12 @@ export interface Venue {
   id: string;
   name: string;
   address: string;
+  address_hi: string | null;
+  address_pa: string | null;
   google_maps_link: string | null;
   parking_info: string | null;
+  parking_info_hi: string | null;
+  parking_info_pa: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -35,7 +60,11 @@ export interface Venue {
 export interface FAQ {
   id: string;
   question: string;
+  question_hi: string | null;
+  question_pa: string | null;
   answer: string;
+  answer_hi: string | null;
+  answer_pa: string | null;
   category: string | null;
   sort_order: number;
   created_at: string;
@@ -47,6 +76,7 @@ export interface CoordinatorContact {
   name: string;
   phone_number: string;
   role: string | null;
+  side: ContentSide;
   is_primary: boolean;
   created_at: string;
   updated_at: string;

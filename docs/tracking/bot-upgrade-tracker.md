@@ -72,7 +72,7 @@ PRs within the same phase that share a "Parallel Group" letter (A, B, C...) can 
 
 | PR | Title | Parallel | Status | Dependencies |
 |----|-------|----------|--------|--------------|
-| PR-01 | Database Migrations + Types | - | Pending | PR-00 |
+| PR-01 | Database Migrations + Types | - | ✅ Done | PR-00 |
 | PR-02 | Interactive Message Client + Constants | - | Pending | PR-00 |
 
 *PR-01 and PR-02 can run in parallel after PR-00 is validated.*
@@ -528,7 +528,7 @@ curl -X POST http://localhost:3000/test-interactive/list?to=YOUR_PHONE
 | PR | Completed | Report File | Notes |
 |----|-----------|-------------|-------|
 | PR-00 | 2026-01-17 | PR-00-spike-validation.md | SPIKE - Validated ✓ Interactive messages working |
-| PR-01 | - | - | Can parallel with PR-02 |
+| PR-01 | 2026-01-17 | PR-01-database-migrations.md | DB migrations + TypeScript types |
 | PR-02 | - | - | Can parallel with PR-01 |
 | PR-03 | - | - | |
 | PR-04 | - | - | |
