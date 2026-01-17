@@ -1,13 +1,33 @@
 import { getSupabase } from '../db/client';
-import type { Event, Venue, FAQ, CoordinatorContact } from '../types';
+import type {
+  Event,
+  Venue,
+  FAQ,
+  CoordinatorContact,
+  Guest,
+  UserLanguage,
+  UserSide,
+} from '../types';
 import {
   parseInteractiveMessage,
   isLanguageId,
   isSideId,
+  isMenuId,
+  isNavId,
   extractLanguage,
   extractSide,
   MENU_IDS,
+  LANG_IDS,
+  SIDE_IDS,
+  NAV_IDS,
 } from '../constants/buttonIds';
+import {
+  sendReplyButtons,
+  sendListMessage,
+  type ReplyButton,
+  type ListSection,
+} from './whatsappClient';
+import { updateGuestLanguage, updateGuestSide, updateGuestOptIn } from '../repositories/guests';
 
 // Simple in-memory cache (5 minute TTL)
 const cache: Map<string, { data: string; expires: number }> = new Map();
@@ -26,167 +46,518 @@ function setCache(key: string, data: string): void {
   cache.set(key, { data, expires: Date.now() + CACHE_TTL });
 }
 
-const MAIN_MENU = `Welcome! Reply with a number:
-
-1 - Wedding Location Guide
-2 - Dress Code
-3 - Schedule
-4 - FAQ
-5 - Emergency Contact
-
-Reply STOP to unsubscribe.`;
+// ============================================================
+// MAIN ENTRY POINT
+// ============================================================
 
 /**
  * Handle incoming message and return response.
- * Returns string for text response, or null if interactive message was sent.
+ * Returns string for text response, or null if interactive message was sent directly.
  */
-export async function handleMessage(phoneNumber: string, messageText: string): Promise<string | null> {
+export async function handleMessage(guest: Guest, messageText: string): Promise<string | null> {
   const text = messageText.trim().toUpperCase();
 
   // Handle opt-out/opt-in
   if (text === 'STOP') {
-    await updateOptIn(phoneNumber, false);
+    await updateGuestOptIn(guest.phone_number, false);
     return 'You have been unsubscribed. Reply START to subscribe again.';
   }
 
   if (text === 'START') {
-    await updateOptIn(phoneNumber, true);
-    return `You have been subscribed.\n\n${MAIN_MENU}`;
+    await updateGuestOptIn(guest.phone_number, true);
+    // After resubscribing, show appropriate screen based on onboarding state
+    if (!guest.user_language) {
+      await showLanguageSelection(guest.phone_number);
+      return null;
+    }
+    if (!guest.user_side) {
+      await showSideSelection(guest.phone_number, guest.user_language);
+      return null;
+    }
+    await showMainMenu(guest.phone_number, guest.user_language);
+    return null;
   }
 
-  // Handle button/list replies from interactive messages
+  // Parse interactive message if present
   const interactiveMsg = parseInteractiveMessage(messageText.trim());
-  if (interactiveMsg) {
-    return handleInteractiveReply(phoneNumber, interactiveMsg.id);
+  const buttonId = interactiveMsg?.id || null;
+
+  // State machine based on guest onboarding status
+  // Step 1: Language not set - show or handle language selection
+  if (!guest.user_language) {
+    return await handleLanguageState(guest, buttonId);
   }
 
-  // Handle menu options
-  switch (text) {
-    case 'HI':
-    case 'HELLO':
-    case 'HEY':
-    case 'MENU':
-    case '0':
-      return MAIN_MENU;
+  // Step 2: Side not set - show or handle side selection
+  if (!guest.user_side) {
+    return await handleSideState(guest, buttonId);
+  }
 
+  // Step 3: Fully onboarded - route to menu handlers
+  return await handleOnboardedState(guest, buttonId, text);
+}
+
+// ============================================================
+// STATE HANDLERS
+// ============================================================
+
+/**
+ * Handle state when user_language is null
+ */
+async function handleLanguageState(guest: Guest, buttonId: string | null): Promise<string | null> {
+  // If they tapped a language button, save it and show side selection
+  if (buttonId && isLanguageId(buttonId)) {
+    const language = extractLanguage(buttonId);
+    if (language) {
+      console.log(`[ONBOARDING] ${guest.phone_number} selected language: ${language}`);
+      const updatedGuest = await updateGuestLanguage(guest.id, language);
+      await showSideSelection(guest.phone_number, updatedGuest.user_language!);
+      return null;
+    }
+  }
+
+  // Otherwise, show language selection
+  await showLanguageSelection(guest.phone_number);
+  return null;
+}
+
+/**
+ * Handle state when user_side is null
+ */
+async function handleSideState(guest: Guest, buttonId: string | null): Promise<string | null> {
+  // If they tapped a side button, save it and show main menu
+  if (buttonId && isSideId(buttonId)) {
+    const side = extractSide(buttonId);
+    if (side) {
+      console.log(`[ONBOARDING] ${guest.phone_number} selected side: ${side}`);
+      const updatedGuest = await updateGuestSide(guest.id, side);
+      await showMainMenu(guest.phone_number, guest.user_language!);
+      // Show a welcome message with the menu
+      return getWelcomeMessage(guest.user_language!, updatedGuest.user_side!);
+    }
+  }
+
+  // Otherwise, re-show side selection
+  await showSideSelection(guest.phone_number, guest.user_language!);
+  return null;
+}
+
+/**
+ * Handle state when guest is fully onboarded
+ */
+async function handleOnboardedState(
+  guest: Guest,
+  buttonId: string | null,
+  textInput: string
+): Promise<string | null> {
+  // Handle navigation
+  if (buttonId && isNavId(buttonId)) {
+    if (buttonId === NAV_IDS.BACK_TO_MENU) {
+      await showMainMenu(guest.phone_number, guest.user_language!);
+      return null;
+    }
+  }
+
+  // Handle menu selections
+  if (buttonId && isMenuId(buttonId)) {
+    return await handleMenuSelection(guest, buttonId);
+  }
+
+  // Handle button presses for specific flows (language re-selection, etc.)
+  if (buttonId && isLanguageId(buttonId)) {
+    // They somehow got a language button while onboarded - treat as reset
+    await showMainMenu(guest.phone_number, guest.user_language!);
+    return null;
+  }
+
+  if (buttonId && isSideId(buttonId)) {
+    // They somehow got a side button while onboarded - treat as reset
+    await showMainMenu(guest.phone_number, guest.user_language!);
+    return null;
+  }
+
+  // Handle text commands (legacy support)
+  if (textInput === 'MENU' || textInput === '0' || textInput === 'HI' || textInput === 'HELLO') {
+    await showMainMenu(guest.phone_number, guest.user_language!);
+    return null;
+  }
+
+  // Numeric menu commands for legacy support
+  switch (textInput) {
     case '1':
-      return await getVenuesAndDirections();
-
+      return await getEventSchedule(guest);
     case '2':
-      return await getDressCodes();
-
+      return await getVenuesAndDirections(guest);
     case '3':
-      return await getEventSchedule();
-
+      return await getDressCodes(guest);
     case '4':
-      return await getFAQs();
-
+      return await getFAQs(guest);
     case '5':
-      return await getCoordinatorContact();
+      return await getCoordinatorContact(guest);
+  }
+
+  // Unknown input - show fallback menu
+  await showMainMenu(guest.phone_number, guest.user_language!);
+  return getFallbackMessage(guest.user_language!);
+}
+
+/**
+ * Handle menu item selections
+ */
+async function handleMenuSelection(guest: Guest, menuId: string): Promise<string | null> {
+  switch (menuId) {
+    case MENU_IDS.SCHEDULE:
+      return await getEventSchedule(guest);
+
+    case MENU_IDS.VENUE:
+      return await getVenuesAndDirections(guest);
+
+    case MENU_IDS.TRAVEL:
+      // TODO PR-08: Travel info
+      return getStubResponse('Travel & Stay', guest.user_language!);
+
+    case MENU_IDS.RSVP:
+      // TODO PR-09: Full RSVP flow
+      return getStubResponse('RSVP', guest.user_language!);
+
+    case MENU_IDS.EMERGENCY:
+      return await getCoordinatorContact(guest);
+
+    case MENU_IDS.FAQ:
+      return await getFAQs(guest);
+
+    case MENU_IDS.GIFTS:
+      // TODO PR-08: Gift registry
+      return getStubResponse('Gift Registry', guest.user_language!);
+
+    case MENU_IDS.RESET:
+      // TODO PR-10: Reset flow
+      return getStubResponse('Reset', guest.user_language!);
 
     default:
-      return `Sorry, I didn't understand that.\n\n${MAIN_MENU}`;
+      await showMainMenu(guest.phone_number, guest.user_language!);
+      return null;
+  }
+}
+
+// ============================================================
+// INTERACTIVE MESSAGE SENDERS
+// ============================================================
+
+/**
+ * Show language selection buttons (always in English since language unknown)
+ */
+async function showLanguageSelection(phoneNumber: string): Promise<void> {
+  const body = `Welcome to Sanjoli & Shreyas's Wedding! 🌸
+
+Please select your language:`;
+
+  const buttons: ReplyButton[] = [
+    { id: LANG_IDS.ENGLISH, title: 'English' },
+    { id: LANG_IDS.HINDI, title: 'हिंदी' },
+    { id: LANG_IDS.PUNJABI, title: 'ਪੰਜਾਬੀ' },
+  ];
+
+  try {
+    await sendReplyButtons(phoneNumber, body, buttons);
+    console.log(`[INTERACTIVE] Sent language selection to ${phoneNumber}`);
+  } catch (error) {
+    console.error(`[INTERACTIVE] Failed to send language selection:`, error);
+    throw error;
   }
 }
 
 /**
- * Handle replies from interactive messages (buttons/lists)
- * This function will be expanded in PR-03 to handle the full onboarding flow.
+ * Show side selection buttons (in user's language)
  */
-async function handleInteractiveReply(_phoneNumber: string, buttonId: string): Promise<string> {
-  // Log for debugging
-  console.log(`[INTERACTIVE] Received button/list reply: ${buttonId}`);
+async function showSideSelection(phoneNumber: string, language: UserLanguage): Promise<void> {
+  const messages: Record<UserLanguage, { body: string; groom: string; bride: string }> = {
+    EN: {
+      body: `Thank you! 🙏
 
-  // Handle language selection
-  if (isLanguageId(buttonId)) {
-    const lang = extractLanguage(buttonId);
-    const langNames: Record<string, string> = {
-      EN: 'English',
-      HI: 'Hindi (हिंदी)',
-      PA: 'Punjabi (ਪੰਜਾਬੀ)',
-    };
-    // TODO PR-03: Save language to guest record and show side selection
-    return `You selected: ${langNames[lang || 'EN']}\n\nReply 0 for menu.`;
-  }
+Please select your side:`,
+      groom: "Groom's Side (Shreyas)",
+      bride: "Bride's Side (Sanjoli)",
+    },
+    HI: {
+      body: `धन्यवाद! 🙏
 
-  // Handle side selection
-  if (isSideId(buttonId)) {
-    const side = extractSide(buttonId);
-    // TODO PR-03: Save side to guest record and show main menu
-    return `You selected: ${side === 'GROOM' ? "Groom's Side" : "Bride's Side"}\n\nReply 0 for menu.`;
-  }
+कृपया अपना पक्ष चुनें:`,
+      groom: 'वर पक्ष (श्रेयस)',
+      bride: 'वधू पक्ष (संजोली)',
+    },
+    PA: {
+      body: `ਧੰਨਵਾਦ! 🙏
 
-  // Handle menu selections
-  switch (buttonId) {
-    case MENU_IDS.SCHEDULE:
-      return await getEventSchedule();
-    case MENU_IDS.VENUE:
-      return await getVenuesAndDirections();
-    case MENU_IDS.RSVP:
-      // TODO PR-09: Full RSVP flow
-      return 'RSVP feature coming soon!\n\nReply 0 for menu.';
-    case MENU_IDS.EMERGENCY:
-      return await getCoordinatorContact();
-    case MENU_IDS.FAQ:
-      return await getFAQs();
-    case MENU_IDS.TRAVEL:
-      // TODO PR-08: Travel info
-      return 'Travel information coming soon!\n\nReply 0 for menu.';
-    case MENU_IDS.GIFTS:
-      // TODO PR-08: Gift registry
-      return 'Gift registry coming soon!\n\nReply 0 for menu.';
-    case MENU_IDS.RESET:
-      // TODO PR-10: Reset flow
-      return 'Reset feature coming soon!\n\nReply 0 for menu.';
-    default:
-      return `Unknown option. Please reply 0 for menu.`;
+ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਪੱਖ ਚੁਣੋ:`,
+      groom: 'ਲਾੜੇ ਵਾਲੇ (ਸ਼੍ਰੇਯਸ)',
+      bride: 'ਲਾੜੀ ਵਾਲੇ (ਸੰਜੋਲੀ)',
+    },
+  };
+
+  const msg = messages[language];
+  const buttons: ReplyButton[] = [
+    { id: SIDE_IDS.GROOM, title: msg.groom },
+    { id: SIDE_IDS.BRIDE, title: msg.bride },
+  ];
+
+  try {
+    await sendReplyButtons(phoneNumber, msg.body, buttons);
+    console.log(`[INTERACTIVE] Sent side selection to ${phoneNumber}`);
+  } catch (error) {
+    console.error(`[INTERACTIVE] Failed to send side selection:`, error);
+    throw error;
   }
 }
 
-async function updateOptIn(phoneNumber: string, optedIn: boolean): Promise<void> {
-  const supabase = getSupabase();
-  await supabase.from('guests').update({ opted_in: optedIn }).eq('phone_number', phoneNumber);
+/**
+ * Show main menu list message (in user's language)
+ */
+async function showMainMenu(phoneNumber: string, language: UserLanguage): Promise<void> {
+  const menus: Record<
+    UserLanguage,
+    {
+      body: string;
+      button: string;
+      items: Array<{ id: string; title: string; description: string }>;
+    }
+  > = {
+    EN: {
+      body: 'How can I help you today?',
+      button: 'View Options',
+      items: [
+        { id: MENU_IDS.SCHEDULE, title: 'Event Schedule', description: 'View all wedding events' },
+        {
+          id: MENU_IDS.VENUE,
+          title: 'Venue & Directions',
+          description: 'Get venue details & maps',
+        },
+        {
+          id: MENU_IDS.TRAVEL,
+          title: 'Travel & Stay',
+          description: 'Travel and accommodation info',
+        },
+        { id: MENU_IDS.RSVP, title: 'RSVP', description: 'Confirm your attendance' },
+        { id: MENU_IDS.EMERGENCY, title: 'Emergency Contact', description: 'Get help immediately' },
+        { id: MENU_IDS.FAQ, title: 'FAQs', description: 'Common questions answered' },
+        { id: MENU_IDS.GIFTS, title: 'Gift Registry', description: 'View gift suggestions' },
+        {
+          id: MENU_IDS.RESET,
+          title: 'Change Language/Side',
+          description: 'Update your preferences',
+        },
+      ],
+    },
+    HI: {
+      body: 'मैं आज आपकी कैसे मदद कर सकता हूं?',
+      button: 'विकल्प देखें',
+      items: [
+        {
+          id: MENU_IDS.SCHEDULE,
+          title: 'कार्यक्रम सूची',
+          description: 'सभी शादी के कार्यक्रम देखें',
+        },
+        {
+          id: MENU_IDS.VENUE,
+          title: 'स्थान और दिशा',
+          description: 'स्थान विवरण और नक्शा प्राप्त करें',
+        },
+        { id: MENU_IDS.TRAVEL, title: 'यात्रा और ठहराव', description: 'यात्रा और आवास जानकारी' },
+        { id: MENU_IDS.RSVP, title: 'RSVP', description: 'अपनी उपस्थिति की पुष्टि करें' },
+        {
+          id: MENU_IDS.EMERGENCY,
+          title: 'आपातकालीन संपर्क',
+          description: 'तुरंत सहायता प्राप्त करें',
+        },
+        {
+          id: MENU_IDS.FAQ,
+          title: 'अक्सर पूछे जाने वाले प्रश्न',
+          description: 'सामान्य प्रश्नों के उत्तर',
+        },
+        { id: MENU_IDS.GIFTS, title: 'उपहार सूची', description: 'उपहार सुझाव देखें' },
+        {
+          id: MENU_IDS.RESET,
+          title: 'भाषा/पक्ष बदलें',
+          description: 'अपनी प्राथमिकताएं अपडेट करें',
+        },
+      ],
+    },
+    PA: {
+      body: 'ਅੱਜ ਮੈਂ ਤੁਹਾਡੀ ਕਿਵੇਂ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ?',
+      button: 'ਵਿਕਲਪ ਦੇਖੋ',
+      items: [
+        { id: MENU_IDS.SCHEDULE, title: 'ਸਮਾਗਮ ਸੂਚੀ', description: 'ਸਾਰੇ ਵਿਆਹ ਦੇ ਸਮਾਗਮ ਦੇਖੋ' },
+        {
+          id: MENU_IDS.VENUE,
+          title: 'ਸਥਾਨ ਅਤੇ ਦਿਸ਼ਾ',
+          description: 'ਸਥਾਨ ਵੇਰਵੇ ਅਤੇ ਨਕਸ਼ਾ ਪ੍ਰਾਪਤ ਕਰੋ',
+        },
+        {
+          id: MENU_IDS.TRAVEL,
+          title: 'ਯਾਤਰਾ ਅਤੇ ਠਹਿਰਾਅ',
+          description: 'ਯਾਤਰਾ ਅਤੇ ਰਹਿਣ ਦੀ ਜਾਣਕਾਰੀ',
+        },
+        { id: MENU_IDS.RSVP, title: 'RSVP', description: 'ਆਪਣੀ ਹਾਜ਼ਰੀ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ' },
+        { id: MENU_IDS.EMERGENCY, title: 'ਐਮਰਜੈਂਸੀ ਸੰਪਰਕ', description: 'ਤੁਰੰਤ ਮਦਦ ਪ੍ਰਾਪਤ ਕਰੋ' },
+        { id: MENU_IDS.FAQ, title: 'ਅਕਸਰ ਪੁੱਛੇ ਸਵਾਲ', description: 'ਆਮ ਸਵਾਲਾਂ ਦੇ ਜਵਾਬ' },
+        { id: MENU_IDS.GIFTS, title: 'ਤੋਹਫ਼ਾ ਸੂਚੀ', description: 'ਤੋਹਫ਼ੇ ਦੇ ਸੁਝਾਅ ਦੇਖੋ' },
+        { id: MENU_IDS.RESET, title: 'ਭਾਸ਼ਾ/ਪੱਖ ਬਦਲੋ', description: 'ਆਪਣੀਆਂ ਤਰਜੀਹਾਂ ਅੱਪਡੇਟ ਕਰੋ' },
+      ],
+    },
+  };
+
+  const menu = menus[language];
+  const sections: ListSection[] = [
+    {
+      title: 'Menu',
+      rows: menu.items.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+      })),
+    },
+  ];
+
+  try {
+    await sendListMessage(phoneNumber, menu.body, menu.button, sections);
+    console.log(`[INTERACTIVE] Sent main menu to ${phoneNumber}`);
+  } catch (error) {
+    console.error(`[INTERACTIVE] Failed to send main menu:`, error);
+    throw error;
+  }
 }
 
-async function getEventSchedule(): Promise<string> {
-  const cached = getCached('events');
+// ============================================================
+// MESSAGE HELPERS
+// ============================================================
+
+/**
+ * Get welcome message after completing onboarding
+ */
+function getWelcomeMessage(language: UserLanguage, side: UserSide): string {
+  const sideName = {
+    EN: side === 'GROOM' ? "Groom's family" : "Bride's family",
+    HI: side === 'GROOM' ? 'वर पक्ष' : 'वधू पक्ष',
+    PA: side === 'GROOM' ? 'ਲਾੜੇ ਵਾਲੇ' : 'ਲਾੜੀ ਵਾਲੇ',
+  };
+
+  const messages: Record<UserLanguage, string> = {
+    EN: `Welcome, ${sideName.EN}! 🎉
+
+You're all set! Use the menu above to explore wedding details.`,
+    HI: `स्वागत है, ${sideName.HI}! 🎉
+
+आप तैयार हैं! शादी की जानकारी के लिए ऊपर मेनू का उपयोग करें।`,
+    PA: `ਜੀ ਆਇਆਂ ਨੂੰ, ${sideName.PA}! 🎉
+
+ਤੁਸੀਂ ਤਿਆਰ ਹੋ! ਵਿਆਹ ਦੇ ਵੇਰਵਿਆਂ ਲਈ ਉੱਪਰ ਮੇਨੂ ਦੀ ਵਰਤੋਂ ਕਰੋ।`,
+  };
+
+  return messages[language];
+}
+
+/**
+ * Get fallback message for unknown inputs
+ */
+function getFallbackMessage(language: UserLanguage): string {
+  const messages: Record<UserLanguage, string> = {
+    EN: "I didn't understand that. Please select an option from the menu:",
+    HI: 'मैं समझ नहीं पाया। कृपया मेनू से एक विकल्प चुनें:',
+    PA: 'ਮੈਂ ਸਮਝ ਨਹੀਂ ਸਕਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਮੇਨੂ ਤੋਂ ਇੱਕ ਵਿਕਲਪ ਚੁਣੋ:',
+  };
+  return messages[language];
+}
+
+/**
+ * Get back to menu message
+ */
+function getBackToMenuMessage(language: UserLanguage): string {
+  const messages: Record<UserLanguage, string> = {
+    EN: '\n\nReply 0 or tap "View Options" for menu.',
+    HI: '\n\nमेनू के लिए 0 दबाएं या "विकल्प देखें" पर टैप करें।',
+    PA: '\n\nਮੇਨੂ ਲਈ 0 ਦਬਾਓ ਜਾਂ "ਵਿਕਲਪ ਦੇਖੋ" ਤੇ ਟੈਪ ਕਰੋ।',
+  };
+  return messages[language];
+}
+
+/**
+ * Get stub response for features not yet implemented
+ */
+function getStubResponse(feature: string, language: UserLanguage): string {
+  const messages: Record<UserLanguage, string> = {
+    EN: `${feature} feature coming soon!`,
+    HI: `${feature} सुविधा जल्द आ रही है!`,
+    PA: `${feature} ਸੁਵਿਧਾ ਜਲਦੀ ਆ ਰਹੀ ਹੈ!`,
+  };
+  return messages[language] + getBackToMenuMessage(language);
+}
+
+// ============================================================
+// CONTENT FETCHERS
+// ============================================================
+
+async function getEventSchedule(guest: Guest): Promise<string> {
+  const language = guest.user_language || 'EN';
+  const cacheKey = `events_${language}_${guest.user_side}`;
+  const cached = getCached(cacheKey);
   if (cached) return cached;
 
   const supabase = getSupabase();
-  const { data: events, error } = await supabase
+
+  // Fetch events filtered by side
+  let query = supabase
     .from('events')
     .select('*, venues(name)')
     .order('sort_order', { ascending: true });
 
-  if (error || !events || events.length === 0) {
-    return 'Schedule coming soon!\n\nReply 0 for menu.';
+  // Filter by side: show events for guest's side or BOTH
+  if (guest.user_side) {
+    query = query.or(`side.eq.${guest.user_side},side.eq.BOTH`);
   }
+
+  const { data: events, error } = await query;
+
+  if (error || !events || events.length === 0) {
+    return getStubResponse('Schedule', language);
+  }
+
+  const headers: Record<UserLanguage, string> = {
+    EN: '*Event Schedule*',
+    HI: '*कार्यक्रम सूची*',
+    PA: '*ਸਮਾਗਮ ਸੂਚੀ*',
+  };
 
   const eventList = events
     .map((event: Event & { venues?: { name: string } }) => {
       const date = new Date(event.start_time);
-      const dateStr = date.toLocaleDateString('en-US', {
+      const dateStr = date.toLocaleDateString(language === 'EN' ? 'en-US' : 'hi-IN', {
         weekday: 'long',
         month: 'long',
         day: 'numeric',
       });
-      const timeStr = date.toLocaleTimeString('en-US', {
+      const timeStr = date.toLocaleTimeString(language === 'EN' ? 'en-US' : 'hi-IN', {
         hour: 'numeric',
         minute: '2-digit',
       });
       const venue = event.venues?.name || '';
 
-      return `*${event.name}*\n${dateStr} at ${timeStr}${venue ? `\nVenue: ${venue}` : ''}`;
+      // Get translated name
+      const name =
+        (language === 'HI' && event.name_hi) || (language === 'PA' && event.name_pa) || event.name;
+
+      return `*${name}*\n${dateStr} at ${timeStr}${venue ? `\nVenue: ${venue}` : ''}`;
     })
     .join('\n\n');
 
-  const result = `*Schedule*\n\n${eventList}\n\nReply 0 for menu.`;
-  setCache('events', result);
+  const result = `${headers[language]}\n\n${eventList}${getBackToMenuMessage(language)}`;
+  setCache(cacheKey, result);
   return result;
 }
 
-async function getVenuesAndDirections(): Promise<string> {
-  const cached = getCached('venues');
+async function getVenuesAndDirections(guest: Guest): Promise<string> {
+  const language = guest.user_language || 'EN';
+  const cacheKey = `venues_${language}`;
+  const cached = getCached(cacheKey);
   if (cached) return cached;
 
   const supabase = getSupabase();
@@ -196,55 +567,105 @@ async function getVenuesAndDirections(): Promise<string> {
     .order('name', { ascending: true });
 
   if (error || !venues || venues.length === 0) {
-    return 'Wedding location guide coming soon!\n\nReply 0 for menu.';
+    return getStubResponse('Venues', language);
   }
+
+  const headers: Record<UserLanguage, string> = {
+    EN: '*Venue & Directions*',
+    HI: '*स्थान और दिशा-निर्देश*',
+    PA: '*ਸਥਾਨ ਅਤੇ ਦਿਸ਼ਾ-ਨਿਰਦੇਸ਼*',
+  };
 
   const venueList = venues
     .map((venue: Venue) => {
-      let text = `*${venue.name}*\n${venue.address}`;
+      const address =
+        (language === 'HI' && venue.address_hi) ||
+        (language === 'PA' && venue.address_pa) ||
+        venue.address;
+
+      const parking =
+        (language === 'HI' && venue.parking_info_hi) ||
+        (language === 'PA' && venue.parking_info_pa) ||
+        venue.parking_info;
+
+      let text = `*${venue.name}*\n${address}`;
       if (venue.google_maps_link) {
         text += `\nMap: ${venue.google_maps_link}`;
       }
-      if (venue.parking_info) {
-        text += `\nParking: ${venue.parking_info}`;
+      if (parking) {
+        text += `\nParking: ${parking}`;
       }
       return text;
     })
     .join('\n\n');
 
-  const result = `*Wedding Location Guide*\n\n${venueList}\n\nReply 0 for menu.`;
-  setCache('venues', result);
+  const result = `${headers[language]}\n\n${venueList}${getBackToMenuMessage(language)}`;
+  setCache(cacheKey, result);
   return result;
 }
 
-async function getDressCodes(): Promise<string> {
-  const cached = getCached('dresscodes');
+async function getDressCodes(guest: Guest): Promise<string> {
+  const language = guest.user_language || 'EN';
+  const cacheKey = `dresscodes_${language}_${guest.user_side}`;
+  const cached = getCached(cacheKey);
   if (cached) return cached;
 
   const supabase = getSupabase();
-  const { data: events, error } = await supabase
+
+  let query = supabase
     .from('events')
-    .select('name, dress_code')
+    .select('name, name_hi, name_pa, dress_code, dress_code_hi, dress_code_pa, side')
     .not('dress_code', 'is', null)
     .order('sort_order', { ascending: true });
 
-  if (error || !events || events.length === 0) {
-    return 'Dress code information coming soon!\n\nReply 0 for menu.';
+  // Filter by side
+  if (guest.user_side) {
+    query = query.or(`side.eq.${guest.user_side},side.eq.BOTH`);
   }
 
+  const { data: events, error } = await query;
+
+  if (error || !events || events.length === 0) {
+    return getStubResponse('Dress Code', language);
+  }
+
+  const headers: Record<UserLanguage, string> = {
+    EN: '*Dress Code*',
+    HI: '*ड्रेस कोड*',
+    PA: '*ਡ੍ਰੈੱਸ ਕੋਡ*',
+  };
+
   const dressCodes = events
-    .map((event: Pick<Event, 'name' | 'dress_code'>) => {
-      return `*${event.name}*\n${event.dress_code}`;
+    .map((event) => {
+      const name =
+        (language === 'HI' && event.name_hi) || (language === 'PA' && event.name_pa) || event.name;
+
+      const dressCode =
+        (language === 'HI' && event.dress_code_hi) ||
+        (language === 'PA' && event.dress_code_pa) ||
+        event.dress_code;
+
+      return `*${name}*\n${dressCode}`;
     })
     .join('\n\n');
 
-  const result = `*Dress Code*\n\n${dressCodes}\n\nView color palettes: https://wedding-jarvis-production.up.railway.app/dress-code\n\nReply 0 for menu.`;
-  setCache('dresscodes', result);
+  // Add link to dress code page with appropriate language
+  const langPath = language === 'HI' ? '/hi' : language === 'PA' ? '/pa' : '';
+  const viewMore: Record<UserLanguage, string> = {
+    EN: 'View color palettes',
+    HI: 'रंग पैलेट देखें',
+    PA: 'ਰੰਗ ਪੈਲੇਟ ਦੇਖੋ',
+  };
+
+  const result = `${headers[language]}\n\n${dressCodes}\n\n${viewMore[language]}: https://wedding-jarvis-production.up.railway.app/dress-code${langPath}${getBackToMenuMessage(language)}`;
+  setCache(cacheKey, result);
   return result;
 }
 
-async function getFAQs(): Promise<string> {
-  const cached = getCached('faqs');
+async function getFAQs(guest: Guest): Promise<string> {
+  const language = guest.user_language || 'EN';
+  const cacheKey = `faqs_${language}`;
+  const cached = getCached(cacheKey);
   if (cached) return cached;
 
   const supabase = getSupabase();
@@ -254,57 +675,91 @@ async function getFAQs(): Promise<string> {
     .order('sort_order', { ascending: true });
 
   if (error || !faqs || faqs.length === 0) {
-    return 'FAQs coming soon!\n\nReply 0 for menu.';
+    return getStubResponse('FAQs', language);
   }
+
+  const headers: Record<UserLanguage, string> = {
+    EN: '*Frequently Asked Questions*',
+    HI: '*अक्सर पूछे जाने वाले प्रश्न*',
+    PA: '*ਅਕਸਰ ਪੁੱਛੇ ਜਾਣ ਵਾਲੇ ਸਵਾਲ*',
+  };
 
   const faqList = faqs
     .map((faq: FAQ) => {
-      return `*Q: ${faq.question}*\nA: ${faq.answer}`;
+      const question =
+        (language === 'HI' && faq.question_hi) ||
+        (language === 'PA' && faq.question_pa) ||
+        faq.question;
+
+      const answer =
+        (language === 'HI' && faq.answer_hi) || (language === 'PA' && faq.answer_pa) || faq.answer;
+
+      return `*Q: ${question}*\nA: ${answer}`;
     })
     .join('\n\n');
 
-  const result = `*FAQ*\n\n${faqList}\n\nReply 0 for menu.`;
-  setCache('faqs', result);
+  const result = `${headers[language]}\n\n${faqList}${getBackToMenuMessage(language)}`;
+  setCache(cacheKey, result);
   return result;
 }
 
-async function getCoordinatorContact(): Promise<string> {
-  const cached = getCached('coordinator');
+async function getCoordinatorContact(guest: Guest): Promise<string> {
+  const language = guest.user_language || 'EN';
+  const cacheKey = `coordinator_${language}_${guest.user_side}`;
+  const cached = getCached(cacheKey);
   if (cached) return cached;
 
   const supabase = getSupabase();
-  const { data: contacts, error } = await supabase
-    .from('coordinator_contacts')
-    .select('*')
-    .eq('is_primary', true)
-    .limit(1);
+
+  // Try to get primary contact for guest's side or BOTH
+  let query = supabase.from('coordinator_contacts').select('*').eq('is_primary', true);
+
+  if (guest.user_side) {
+    query = query.or(`side.eq.${guest.user_side},side.eq.BOTH`);
+  }
+
+  const { data: contacts, error } = await query.limit(1);
 
   if (error || !contacts || contacts.length === 0) {
     // Fallback to any coordinator
-    const { data: anyContact } = await supabase.from('coordinator_contacts').select('*').limit(1);
+    let fallbackQuery = supabase.from('coordinator_contacts').select('*');
+    if (guest.user_side) {
+      fallbackQuery = fallbackQuery.or(`side.eq.${guest.user_side},side.eq.BOTH`);
+    }
+    const { data: anyContact } = await fallbackQuery.limit(1);
 
     if (!anyContact || anyContact.length === 0) {
-      return 'Emergency contact coming soon!\n\nReply 0 for menu.';
+      return getStubResponse('Emergency Contact', language);
     }
 
-    const contact = anyContact[0] as CoordinatorContact;
-    const result = formatContactInfo(contact);
-    setCache('coordinator', result);
+    const result = formatContactInfo(anyContact[0] as CoordinatorContact, language);
+    setCache(cacheKey, result);
     return result;
   }
 
-  const contact = contacts[0] as CoordinatorContact;
-  const result = formatContactInfo(contact);
-  setCache('coordinator', result);
+  const result = formatContactInfo(contacts[0] as CoordinatorContact, language);
+  setCache(cacheKey, result);
   return result;
 }
 
-function formatContactInfo(contact: CoordinatorContact): string {
-  let text = `*Emergency Contact*\n\n${contact.name}`;
+function formatContactInfo(contact: CoordinatorContact, language: UserLanguage): string {
+  const headers: Record<UserLanguage, string> = {
+    EN: '*Emergency Contact*',
+    HI: '*आपातकालीन संपर्क*',
+    PA: '*ਐਮਰਜੈਂਸੀ ਸੰਪਰਕ*',
+  };
+
+  const phoneLabels: Record<UserLanguage, string> = {
+    EN: 'Phone',
+    HI: 'फोन',
+    PA: 'ਫੋਨ',
+  };
+
+  let text = `${headers[language]}\n\n${contact.name}`;
   if (contact.role) {
     text += ` (${contact.role})`;
   }
-  text += `\nPhone: ${contact.phone_number}`;
-  text += '\n\nReply 0 for menu.';
+  text += `\n${phoneLabels[language]}: ${contact.phone_number}`;
+  text += getBackToMenuMessage(language);
   return text;
 }

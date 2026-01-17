@@ -1,5 +1,5 @@
 import { getSupabase } from '../db/client';
-import type { Guest } from '../types';
+import type { Guest, UserLanguage, UserSide } from '../types';
 
 export async function findOrCreateGuest(phoneNumber: string, name?: string): Promise<Guest> {
   const supabase = getSupabase();
@@ -91,4 +91,60 @@ export async function getAllGuests(
   }
 
   return { guests: data || [], total: count || 0 };
+}
+
+/**
+ * Update guest's language preference
+ */
+export async function updateGuestLanguage(guestId: string, language: UserLanguage): Promise<Guest> {
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from('guests')
+    .update({ user_language: language })
+    .eq('id', guestId)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update guest language: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Update guest's side preference
+ */
+export async function updateGuestSide(guestId: string, side: UserSide): Promise<Guest> {
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from('guests')
+    .update({ user_side: side })
+    .eq('id', guestId)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update guest side: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Update guest's opt-in status
+ */
+export async function updateGuestOptIn(phoneNumber: string, optedIn: boolean): Promise<void> {
+  const supabase = getSupabase();
+
+  const { error } = await supabase
+    .from('guests')
+    .update({ opted_in: optedIn })
+    .eq('phone_number', phoneNumber);
+
+  if (error) {
+    throw new Error(`Failed to update guest opt-in: ${error.message}`);
+  }
 }

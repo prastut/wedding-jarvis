@@ -136,11 +136,11 @@ async function handleInboundMessage(
       rawPayload as unknown as Record<string, unknown>
     );
 
-    // Wait for guest (needed for opt-in status) but don't wait for log
-    await guestPromise;
+    // Wait for guest (needed for bot routing based on guest state)
+    const guest = await guestPromise;
 
     // Generate response using bot menu router
-    const responseText = await handleMessage(phoneNumber, messageText);
+    const responseText = await handleMessage(guest, messageText);
 
     // If responseText is null, an interactive message was already sent
     if (responseText !== null) {
