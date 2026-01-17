@@ -38,9 +38,7 @@ export const config = {
     delayMs: parseInt(optionalEnv('BROADCAST_DELAY_MS', '100'), 10),
   },
 
-  testPhoneNumbers: optionalEnv('TEST_PHONE_NUMBERS', '')
-    .split(',')
-    .filter(Boolean),
+  testPhoneNumbers: optionalEnv('TEST_PHONE_NUMBERS', '').split(',').filter(Boolean),
 };
 
 export function validateConfig(): void {

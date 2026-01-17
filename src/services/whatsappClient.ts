@@ -33,7 +33,7 @@ export async function sendTextMessage(options: SendMessageOptions): Promise<What
   const response = await fetch(url, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${config.whatsapp.accessToken}`,
+      Authorization: `Bearer ${config.whatsapp.accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -64,7 +64,7 @@ export async function sendTemplateMessage(
   const response = await fetch(url, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${config.whatsapp.accessToken}`,
+      Authorization: `Bearer ${config.whatsapp.accessToken}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({

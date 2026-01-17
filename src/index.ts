@@ -7,6 +7,7 @@ import { config, validateConfig } from './config';
 import webhookRouter from './routes/webhook';
 import authRouter from './routes/auth';
 import adminRouter from './routes/admin/index';
+import testInteractiveRouter from './routes/testInteractive';
 
 // Rate limiters
 const authLimiter = rateLimit({
@@ -41,29 +42,35 @@ const app = express();
 app.set('trust proxy', 1);
 
 // Store raw body for webhook signature verification
-app.use(express.json({
-  verify: (req: Request & { rawBody?: Buffer }, _res, buf) => {
-    req.rawBody = buf;
-  },
-}));
+app.use(
+  express.json({
+    verify: (req: Request & { rawBody?: Buffer }, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 
-app.use(cors({
-  origin: true,
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
 
 // Session middleware
-app.use(session({
-  secret: config.session.secret,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: config.nodeEnv === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: 'lax',
-  },
-}));
+app.use(
+  session({
+    secret: config.session.secret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: config.nodeEnv === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      sameSite: 'lax',
+    },
+  })
+);
 
 // Health check endpoint
 app.get('/health', (_req: Request, res: Response) => {
@@ -72,6 +79,9 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // WhatsApp webhook routes
 app.use('/webhook', webhookLimiter, webhookRouter);
+
+// Test interactive messages (temporary - remove after validation)
+app.use('/test-interactive', apiLimiter, testInteractiveRouter);
 
 // Auth routes (stricter rate limit)
 app.use('/api/auth', authLimiter, authRouter);

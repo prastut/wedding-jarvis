@@ -15,7 +15,11 @@ router.get('/', (req: Request, res: Response) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  console.log('Webhook verification request:', { mode, token, challenge: challenge?.toString().substring(0, 20) });
+  console.log('Webhook verification request:', {
+    mode,
+    token,
+    challenge: challenge?.toString().substring(0, 20),
+  });
 
   if (mode === 'subscribe' && token === config.whatsapp.verifyToken) {
     console.log('Webhook verified successfully');
@@ -105,12 +109,7 @@ async function processWebhook(body: WhatsAppInboundMessage): Promise<void> {
           } else {
             console.log(`Received non-text message type: ${message.type}`);
             // Respond with menu for unsupported message types
-            await handleInboundMessage(
-              message.from,
-              'MENU',
-              contact?.profile?.name,
-              body
-            );
+            await handleInboundMessage(message.from, 'MENU', contact?.profile?.name, body);
           }
         }
       }
@@ -129,7 +128,12 @@ async function handleInboundMessage(
 
     // Run guest lookup and inbound logging in parallel (non-blocking for response)
     const guestPromise = findOrCreateGuest(phoneNumber, senderName);
-    const inboundLogPromise = logMessage(phoneNumber, 'inbound', messageText, rawPayload as unknown as Record<string, unknown>);
+    const inboundLogPromise = logMessage(
+      phoneNumber,
+      'inbound',
+      messageText,
+      rawPayload as unknown as Record<string, unknown>
+    );
 
     // Wait for guest (needed for opt-in status) but don't wait for log
     await guestPromise;
@@ -144,12 +148,13 @@ async function handleInboundMessage(
       console.log(`Response sent to ${phoneNumber}`);
 
       // Log outbound message in background (fire and forget)
-      Promise.all([inboundLogPromise, logMessage(phoneNumber, 'outbound', responseText)])
-        .catch(err => console.error('Logging error:', err));
+      Promise.all([inboundLogPromise, logMessage(phoneNumber, 'outbound', responseText)]).catch(
+        (err) => console.error('Logging error:', err)
+      );
     } else {
       console.log(`Interactive message sent to ${phoneNumber} (no text response needed)`);
       // Still wait for inbound log
-      inboundLogPromise.catch(err => console.error('Logging error:', err));
+      inboundLogPromise.catch((err) => console.error('Logging error:', err));
     }
   } catch (error) {
     console.error(`Error handling message from ${phoneNumber}:`, error);

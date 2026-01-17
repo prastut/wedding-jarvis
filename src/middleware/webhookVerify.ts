@@ -25,10 +25,9 @@ export function verifyWebhookSignature(req: Request, res: Response, next: NextFu
     return;
   }
 
-  const expectedSignature = 'sha256=' + crypto
-    .createHmac('sha256', config.whatsapp.appSecret)
-    .update(rawBody)
-    .digest('hex');
+  const expectedSignature =
+    'sha256=' +
+    crypto.createHmac('sha256', config.whatsapp.appSecret).update(rawBody).digest('hex');
 
   if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
     console.error('Invalid webhook signature');

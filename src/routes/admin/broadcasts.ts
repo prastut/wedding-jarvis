@@ -13,7 +13,11 @@ router.get('/', async (req: Request, res: Response) => {
     const limit = parseInt(req.query.limit as string) || 20;
     const offset = (page - 1) * limit;
 
-    const { data: broadcasts, error, count } = await supabase
+    const {
+      data: broadcasts,
+      error,
+      count,
+    } = await supabase
       .from('broadcasts')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
@@ -158,10 +162,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
       return;
     }
 
-    const { error } = await supabase
-      .from('broadcasts')
-      .delete()
-      .eq('id', req.params.id);
+    const { error } = await supabase.from('broadcasts').delete().eq('id', req.params.id);
 
     if (error) throw error;
 
@@ -198,10 +199,7 @@ router.post('/:id/send', async (req: Request, res: Response) => {
     const { sendBroadcast } = await import('../../services/broadcaster');
 
     // Update status to pending before starting
-    await supabase
-      .from('broadcasts')
-      .update({ status: 'pending' })
-      .eq('id', req.params.id);
+    await supabase.from('broadcasts').update({ status: 'pending' }).eq('id', req.params.id);
 
     // Send broadcast (this will update status to sending/completed/failed)
     const result = await sendBroadcast(req.params.id);
