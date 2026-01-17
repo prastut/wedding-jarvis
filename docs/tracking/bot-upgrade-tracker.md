@@ -62,7 +62,7 @@ PRs within the same phase that share a "Parallel Group" letter (A, B, C...) can 
 
 | PR | Title | Parallel | Status | Dependencies |
 |----|-------|----------|--------|--------------|
-| PR-00 | WhatsApp Interactive Message Spike | - | Pending | None |
+| PR-00 | WhatsApp Interactive Message Spike | - | ✅ Done | None |
 
 **Purpose:** Validate that reply buttons and list messages work correctly with our WhatsApp setup before building the full bot.
 
