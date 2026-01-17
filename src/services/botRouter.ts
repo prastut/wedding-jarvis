@@ -318,7 +318,7 @@ ${getMessage('welcome.selectLanguage', 'EN')}`;
 
   try {
     // Include welcome image from public folder
-    const imageUrl = `${config.publicUrl}/images/welcome.jpg`;
+    const imageUrl = `${config.publicUrl}/images/welcome.jpeg`;
     await sendReplyButtons(phoneNumber, body, buttons, { imageUrl });
     console.log(`[INTERACTIVE] Sent language selection to ${phoneNumber} (with image)`);
   } catch (error) {
@@ -473,7 +473,7 @@ async function handleReset(guest: Guest): Promise<void> {
 
   try {
     // Include welcome image from public folder
-    const imageUrl = `${config.publicUrl}/images/welcome.jpg`;
+    const imageUrl = `${config.publicUrl}/images/welcome.jpeg`;
     await sendReplyButtons(guest.phone_number, body, buttons, { imageUrl });
     console.log(`[RESET] Sent language selection after reset to ${guest.phone_number} (with image)`);
   } catch (error) {
