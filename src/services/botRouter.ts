@@ -1,5 +1,6 @@
 import { getSupabase } from '../db/client';
 import type { Event, Venue, FAQ, CoordinatorContact } from '../types';
+import { sendReplyButtons, sendListMessage } from './whatsappClient';
 
 // Simple in-memory cache (5 minute TTL)
 const cache: Map<string, { data: string; expires: number }> = new Map();
@@ -28,7 +29,11 @@ const MAIN_MENU = `Welcome! Reply with a number:
 
 Reply STOP to unsubscribe.`;
 
-export async function handleMessage(phoneNumber: string, messageText: string): Promise<string> {
+/**
+ * Handle incoming message and return response.
+ * Returns string for text response, or null if interactive message was sent.
+ */
+export async function handleMessage(phoneNumber: string, messageText: string): Promise<string | null> {
   const text = messageText.trim().toUpperCase();
 
   // Handle opt-out/opt-in
@@ -41,6 +46,63 @@ export async function handleMessage(phoneNumber: string, messageText: string): P
     await updateOptIn(phoneNumber, true);
     return `You have been subscribed.\n\n${MAIN_MENU}`;
   }
+
+  // ========== INTERACTIVE MESSAGE TEST COMMANDS ==========
+  // Send "TEST" to see language selection buttons
+  if (text === 'TEST') {
+    await sendReplyButtons(
+      phoneNumber,
+      "Welcome to Sanjoli & Shreyas's Wedding!\n\nPlease select your preferred language:",
+      [
+        { id: 'lang_en', title: 'English' },
+        { id: 'lang_hi', title: 'हिंदी' },
+        { id: 'lang_pa', title: 'ਪੰਜਾਬੀ' },
+      ]
+    );
+    return null; // Interactive message sent
+  }
+
+  // Send "TEST LIST" to see the main menu as a list
+  if (text === 'TEST LIST') {
+    await sendListMessage(
+      phoneNumber,
+      "Welcome back! How can I help you today?",
+      'View Options',
+      [
+        {
+          title: 'Main Menu',
+          rows: [
+            { id: 'menu_schedule', title: 'Event Schedule', description: 'View all wedding events' },
+            { id: 'menu_venue', title: 'Venue & Directions', description: 'Get venue details and maps' },
+            { id: 'menu_rsvp', title: 'RSVP', description: 'Confirm your attendance' },
+            { id: 'menu_emergency', title: 'Emergency Contact', description: 'Get help from coordinators' },
+            { id: 'menu_faq', title: 'FAQs', description: 'Common questions answered' },
+          ],
+        },
+      ]
+    );
+    return null; // Interactive message sent
+  }
+
+  // Send "TEST SIDE" to see side selection buttons
+  if (text === 'TEST SIDE') {
+    await sendReplyButtons(
+      phoneNumber,
+      "Thank you!\n\nWhich side of the family are you from?",
+      [
+        { id: 'side_groom', title: "Groom's Side" },
+        { id: 'side_bride', title: "Bride's Side" },
+      ]
+    );
+    return null; // Interactive message sent
+  }
+
+  // Handle button/list replies from interactive messages
+  if (text.startsWith('BUTTON:') || text.startsWith('LIST:')) {
+    const buttonId = text.replace(/^(BUTTON|LIST):/, '');
+    return handleInteractiveReply(phoneNumber, buttonId);
+  }
+  // ========== END TEST COMMANDS ==========
 
   // Handle menu options
   switch (text) {
@@ -67,7 +129,48 @@ export async function handleMessage(phoneNumber: string, messageText: string): P
       return await getCoordinatorContact();
 
     default:
-      return `Sorry, I didn't understand that.\n\n${MAIN_MENU}`;
+      return `Sorry, I didn't understand that.\n\nSend TEST to try interactive buttons.\nSend TEST LIST to try a list menu.\n\n${MAIN_MENU}`;
+  }
+}
+
+/**
+ * Handle replies from interactive messages (buttons/lists)
+ */
+async function handleInteractiveReply(_phoneNumber: string, buttonId: string): Promise<string> {
+  // Log for debugging
+  console.log(`[INTERACTIVE] Received button/list reply: ${buttonId}`);
+
+  // Handle language selection
+  if (buttonId.startsWith('lang_')) {
+    const lang = buttonId.replace('lang_', '').toUpperCase();
+    const langNames: Record<string, string> = {
+      EN: 'English',
+      HI: 'Hindi (हिंदी)',
+      PA: 'Punjabi (ਪੰਜਾਬੀ)',
+    };
+    return `You selected: ${langNames[lang] || lang}\n\nSend TEST SIDE to continue testing.`;
+  }
+
+  // Handle side selection
+  if (buttonId.startsWith('side_')) {
+    const side = buttonId.replace('side_', '');
+    return `You selected: ${side === 'groom' ? "Groom's Side" : "Bride's Side"}\n\nSend TEST LIST to see the menu.`;
+  }
+
+  // Handle menu selections
+  switch (buttonId) {
+    case 'menu_schedule':
+      return await getEventSchedule();
+    case 'menu_venue':
+      return await getVenuesAndDirections();
+    case 'menu_rsvp':
+      return 'RSVP feature coming soon!\n\nSend TEST to go back.';
+    case 'menu_emergency':
+      return await getCoordinatorContact();
+    case 'menu_faq':
+      return await getFAQs();
+    default:
+      return `Button pressed: ${buttonId}\n\nSend TEST to try again.`;
   }
 }
 

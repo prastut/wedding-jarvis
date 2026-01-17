@@ -77,6 +77,31 @@ async function processWebhook(body: WhatsAppInboundMessage): Promise<void> {
               contact?.profile?.name,
               body
             );
+          } else if (message.type === 'interactive' && message.interactive) {
+            // Handle button and list replies
+            const interactive = message.interactive;
+
+            if (interactive.button_reply) {
+              console.log(
+                `[INTERACTIVE] Button reply from ${message.from}: id="${interactive.button_reply.id}" title="${interactive.button_reply.title}"`
+              );
+              await handleInboundMessage(
+                message.from,
+                `BUTTON:${interactive.button_reply.id}`,
+                contact?.profile?.name,
+                body
+              );
+            } else if (interactive.list_reply) {
+              console.log(
+                `[INTERACTIVE] List reply from ${message.from}: id="${interactive.list_reply.id}" title="${interactive.list_reply.title}"`
+              );
+              await handleInboundMessage(
+                message.from,
+                `LIST:${interactive.list_reply.id}`,
+                contact?.profile?.name,
+                body
+              );
+            }
           } else {
             console.log(`Received non-text message type: ${message.type}`);
             // Respond with menu for unsupported message types
@@ -112,14 +137,20 @@ async function handleInboundMessage(
     // Generate response using bot menu router
     const responseText = await handleMessage(phoneNumber, messageText);
 
-    // Send the response immediately
-    await sendTextMessage({ to: phoneNumber, text: responseText });
+    // If responseText is null, an interactive message was already sent
+    if (responseText !== null) {
+      // Send the response immediately
+      await sendTextMessage({ to: phoneNumber, text: responseText });
+      console.log(`Response sent to ${phoneNumber}`);
 
-    console.log(`Response sent to ${phoneNumber}`);
-
-    // Log outbound message in background (fire and forget)
-    Promise.all([inboundLogPromise, logMessage(phoneNumber, 'outbound', responseText)])
-      .catch(err => console.error('Logging error:', err));
+      // Log outbound message in background (fire and forget)
+      Promise.all([inboundLogPromise, logMessage(phoneNumber, 'outbound', responseText)])
+        .catch(err => console.error('Logging error:', err));
+    } else {
+      console.log(`Interactive message sent to ${phoneNumber} (no text response needed)`);
+      // Still wait for inbound log
+      inboundLogPromise.catch(err => console.error('Logging error:', err));
+    }
   } catch (error) {
     console.error(`Error handling message from ${phoneNumber}:`, error);
 
