@@ -7,7 +7,6 @@ import { config, validateConfig } from './config';
 import webhookRouter from './routes/webhook';
 import authRouter from './routes/auth';
 import adminRouter from './routes/admin/index';
-import testInteractiveRouter from './routes/testInteractive';
 
 // Rate limiters
 const authLimiter = rateLimit({
@@ -79,9 +78,6 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // WhatsApp webhook routes
 app.use('/webhook', webhookLimiter, webhookRouter);
-
-// Test interactive messages (temporary - remove after validation)
-app.use('/test-interactive', apiLimiter, testInteractiveRouter);
 
 // Auth routes (stricter rate limit)
 app.use('/api/auth', authLimiter, authRouter);

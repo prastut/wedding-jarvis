@@ -3,7 +3,6 @@ import { getSupabase } from '../db/client';
 import { sendTextMessage } from './whatsappClient';
 import { getOptedInGuests } from '../repositories/guests';
 import { logMessage } from '../repositories/messageLogs';
-import type { Broadcast, Guest } from '../types';
 
 interface BroadcastResult {
   total: number;

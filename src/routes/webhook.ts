@@ -5,6 +5,7 @@ import { handleMessage } from '../services/botRouter';
 import { findOrCreateGuest } from '../repositories/guests';
 import { logMessage } from '../repositories/messageLogs';
 import { verifyWebhookSignature } from '../middleware/webhookVerify';
+import { INTERACTIVE_PREFIXES } from '../constants/buttonIds';
 import type { WhatsAppInboundMessage } from '../types';
 
 const router = Router();
@@ -91,7 +92,7 @@ async function processWebhook(body: WhatsAppInboundMessage): Promise<void> {
               );
               await handleInboundMessage(
                 message.from,
-                `BUTTON:${interactive.button_reply.id}`,
+                `${INTERACTIVE_PREFIXES.BUTTON}${interactive.button_reply.id}`,
                 contact?.profile?.name,
                 body
               );
@@ -101,7 +102,7 @@ async function processWebhook(body: WhatsAppInboundMessage): Promise<void> {
               );
               await handleInboundMessage(
                 message.from,
-                `LIST:${interactive.list_reply.id}`,
+                `${INTERACTIVE_PREFIXES.LIST}${interactive.list_reply.id}`,
                 contact?.profile?.name,
                 body
               );
