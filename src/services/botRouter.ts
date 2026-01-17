@@ -1,6 +1,7 @@
 import { getSupabase } from '../db/client';
 import type { Venue, FAQ, CoordinatorContact, Guest, UserLanguage, UserSide } from '../types';
 import { getEventsBySide, type EventWithVenue } from '../repositories/events';
+import { getContactsBySide } from '../repositories/coordinatorContacts';
 import {
   parseInteractiveMessage,
   isLanguageId,
@@ -563,26 +564,10 @@ async function sendCoordinatorContact(guest: Guest): Promise<void> {
     return;
   }
 
-  const supabase = getSupabase();
+  try {
+    const contacts = await getContactsBySide(guest.user_side);
 
-  // Try to get primary contact for guest's side or BOTH
-  let query = supabase.from('coordinator_contacts').select('*').eq('is_primary', true);
-
-  if (guest.user_side) {
-    query = query.or(`side.eq.${guest.user_side},side.eq.BOTH`);
-  }
-
-  const { data: contacts, error } = await query.limit(1);
-
-  if (error || !contacts || contacts.length === 0) {
-    // Fallback to any coordinator
-    let fallbackQuery = supabase.from('coordinator_contacts').select('*');
-    if (guest.user_side) {
-      fallbackQuery = fallbackQuery.or(`side.eq.${guest.user_side},side.eq.BOTH`);
-    }
-    const { data: anyContact } = await fallbackQuery.limit(1);
-
-    if (!anyContact || anyContact.length === 0) {
+    if (contacts.length === 0) {
       await sendContentWithBackButton(
         guest.phone_number,
         getMessage('error.noData', language),
@@ -591,25 +576,33 @@ async function sendCoordinatorContact(guest: Guest): Promise<void> {
       return;
     }
 
-    const content = formatContactContent(anyContact[0] as CoordinatorContact, language);
+    const content = formatContactsContent(contacts, language);
     setCache(cacheKey, content);
     await sendContentWithBackButton(guest.phone_number, content, language);
-    return;
+  } catch (error) {
+    console.error('[CONTACTS] Error fetching coordinator contacts:', error);
+    await sendContentWithBackButton(
+      guest.phone_number,
+      getMessage('error.noData', language),
+      language
+    );
   }
-
-  const content = formatContactContent(contacts[0] as CoordinatorContact, language);
-  setCache(cacheKey, content);
-  await sendContentWithBackButton(guest.phone_number, content, language);
 }
 
-function formatContactContent(contact: CoordinatorContact, language: UserLanguage): string {
+function formatContactsContent(contacts: CoordinatorContact[], language: UserLanguage): string {
   const header = getMessage('content.emergency.header', language);
   const phoneLabel = getMessage('content.contact.phone', language);
 
-  let text = `${header}\n\n${contact.name}`;
-  if (contact.role) {
-    text += ` (${contact.role})`;
-  }
-  text += `\n${phoneLabel}: ${contact.phone_number}`;
-  return text;
+  const contactList = contacts
+    .map((contact) => {
+      let text = `*${contact.name}*`;
+      if (contact.role) {
+        text += ` (${contact.role})`;
+      }
+      text += `\n${phoneLabel}: ${contact.phone_number}`;
+      return text;
+    })
+    .join('\n\n');
+
+  return `${header}\n\n${contactList}`;
 }
