@@ -359,13 +359,19 @@ button:disabled {
 }
 
 /* Data Table */
+.data-table-wrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: var(--card-bg);
+}
+
 .data-table {
   width: 100%;
+  min-width: 1000px;
   background: var(--card-bg);
   border-radius: 12px;
   border-collapse: collapse;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
 }
 
 .data-table th,
@@ -387,6 +393,10 @@ button:disabled {
   border-bottom: none;
 }
 
+.data-table tbody tr {
+  background: var(--card-bg);
+}
+
 .data-table tr:hover td {
   background: #fafafa;
 }
@@ -398,8 +408,15 @@ button:disabled {
 }
 
 .data-table .actions {
-  display: flex;
-  gap: 8px;
+  white-space: nowrap;
+}
+
+.data-table .actions button {
+  margin-right: 8px;
+}
+
+.data-table .actions button:last-child {
+  margin-right: 0;
 }
 
 .message-cell {

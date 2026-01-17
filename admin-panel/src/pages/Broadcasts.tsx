@@ -368,6 +368,7 @@ export default function Broadcasts() {
         </div>
       )}
 
+      <div className="data-table-wrapper">
       <table className="data-table">
         <thead>
           <tr>
@@ -428,6 +429,7 @@ export default function Broadcasts() {
           )}
         </tbody>
       </table>
+      </div>
 
       {/* Guest Selector Modal */}
       {showGuestSelector && guestSelectorBroadcast && (
