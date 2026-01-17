@@ -85,7 +85,10 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     supabase.from('guests').select('*', { count: 'exact', head: true }).eq('user_language', 'PA'),
     // Messages
     supabase.from('message_logs').select('*', { count: 'exact', head: true }),
-    supabase.from('message_logs').select('*', { count: 'exact', head: true }).eq('direction', 'inbound'),
+    supabase
+      .from('message_logs')
+      .select('*', { count: 'exact', head: true })
+      .eq('direction', 'inbound'),
     supabase
       .from('message_logs')
       .select('created_at')
@@ -94,7 +97,10 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       .single(),
     // Broadcasts
     supabase.from('broadcasts').select('*', { count: 'exact', head: true }),
-    supabase.from('broadcasts').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
+    supabase
+      .from('broadcasts')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'completed'),
   ]);
 
   const totalHeadcount = (headcountData || []).reduce(

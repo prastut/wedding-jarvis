@@ -35,10 +35,7 @@ export interface SendBroadcastOptions {
  * Get the message text for a guest based on their language preference.
  * Falls back to English if the guest's language is not set or the translation is missing.
  */
-function getMessageForLanguage(
-  broadcast: Broadcast,
-  language: UserLanguage | null
-): string {
+function getMessageForLanguage(broadcast: Broadcast, language: UserLanguage | null): string {
   switch (language) {
     case 'HI':
       return broadcast.message_hi || broadcast.message;

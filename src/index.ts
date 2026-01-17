@@ -4,6 +4,7 @@ import session from 'express-session';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { config, validateConfig } from './config';
+import { SupabaseSessionStore } from './db/sessionStore';
 import webhookRouter from './routes/webhook';
 import authRouter from './routes/auth';
 import adminRouter from './routes/admin/index';
@@ -57,9 +58,10 @@ app.use(
   })
 );
 
-// Session middleware
+// Session middleware with PostgreSQL store (persists across server restarts)
 app.use(
   session({
+    store: new SupabaseSessionStore(),
     secret: config.session.secret,
     resave: false,
     saveUninitialized: false,
@@ -89,7 +91,7 @@ app.use('/api/admin', apiLimiter, adminRouter);
 // Public pages (dress code, etc.)
 app.use(pagesRouter);
 
-// Serve admin panel static files
+// Serve admin panel static files (includes public/images from Vite build)
 app.use(express.static(ADMIN_DIST));
 
 // Error handling middleware

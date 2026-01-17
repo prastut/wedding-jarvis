@@ -69,12 +69,28 @@ export interface ListAction {
 // ============================================================
 
 /**
- * Header for interactive messages (optional)
+ * Text header for interactive messages
  */
-export interface InteractiveHeader {
+export interface InteractiveTextHeader {
   type: 'text';
   text: string;
 }
+
+/**
+ * Image header for interactive messages
+ */
+export interface InteractiveImageHeader {
+  type: 'image';
+  image: {
+    link: string;
+  };
+}
+
+/**
+ * Header for interactive messages (optional)
+ * Can be text or image
+ */
+export type InteractiveHeader = InteractiveTextHeader | InteractiveImageHeader;
 
 /**
  * Body for interactive messages (required)

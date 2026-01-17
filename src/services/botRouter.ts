@@ -1,3 +1,4 @@
+import { config } from '../config';
 import { getSupabase } from '../db/client';
 import type { Venue, FAQ, CoordinatorContact, Guest, UserLanguage, UserSide } from '../types';
 import { getEventsBySide, type EventWithVenue } from '../repositories/events';
@@ -263,7 +264,11 @@ async function handleMenuSelection(guest: Guest, menuId: string): Promise<string
       return null;
 
     case MENU_IDS.TRAVEL:
-      await sendContentWithBackButton(guest.phone_number, getMessage('travel.info', language), language);
+      await sendContentWithBackButton(
+        guest.phone_number,
+        getMessage('travel.info', language),
+        language
+      );
       return null;
 
     case MENU_IDS.RSVP:
@@ -298,6 +303,7 @@ async function handleMenuSelection(guest: Guest, menuId: string): Promise<string
 
 /**
  * Show language selection buttons (always in English since language unknown)
+ * Includes welcome image if configured via WELCOME_IMAGE_URL env var
  */
 async function showLanguageSelection(phoneNumber: string): Promise<void> {
   const body = `${getMessage('welcome.title', 'EN')}
@@ -311,8 +317,10 @@ ${getMessage('welcome.selectLanguage', 'EN')}`;
   ];
 
   try {
-    await sendReplyButtons(phoneNumber, body, buttons);
-    console.log(`[INTERACTIVE] Sent language selection to ${phoneNumber}`);
+    // Include welcome image from public folder
+    const imageUrl = `${config.publicUrl}/images/welcome.jpg`;
+    await sendReplyButtons(phoneNumber, body, buttons, { imageUrl });
+    console.log(`[INTERACTIVE] Sent language selection to ${phoneNumber} (with image)`);
   } catch (error) {
     console.error(`[INTERACTIVE] Failed to send language selection:`, error);
     throw error;
@@ -464,8 +472,10 @@ async function handleReset(guest: Guest): Promise<void> {
   ];
 
   try {
-    await sendReplyButtons(guest.phone_number, body, buttons);
-    console.log(`[RESET] Sent language selection after reset to ${guest.phone_number}`);
+    // Include welcome image from public folder
+    const imageUrl = `${config.publicUrl}/images/welcome.jpg`;
+    await sendReplyButtons(guest.phone_number, body, buttons, { imageUrl });
+    console.log(`[RESET] Sent language selection after reset to ${guest.phone_number} (with image)`);
   } catch (error) {
     console.error(`[RESET] Failed to send language selection after reset:`, error);
     throw error;
@@ -628,7 +638,11 @@ async function showGuestCountList(phoneNumber: string, language: UserLanguage): 
     { id: COUNT_IDS.COUNT_7, title: '7', description: '' },
     { id: COUNT_IDS.COUNT_8, title: '8', description: '' },
     { id: COUNT_IDS.COUNT_9, title: '9', description: '' },
-    { id: COUNT_IDS.COUNT_10_PLUS, title: getMessage('rsvp.count.10plus', language), description: '' },
+    {
+      id: COUNT_IDS.COUNT_10_PLUS,
+      title: getMessage('rsvp.count.10plus', language),
+      description: '',
+    },
   ];
 
   const sections: ListSection[] = [
@@ -875,7 +889,7 @@ function formatContactsContent(contacts: CoordinatorContact[], language: UserLan
  * Get the gifts page URL based on language
  */
 function getGiftsPageUrl(language: UserLanguage): string {
-  const baseUrl = process.env.PUBLIC_URL || 'https://wedding-jarvis-production.up.railway.app';
+  const baseUrl = config.publicUrl;
   switch (language) {
     case 'HI':
       return `${baseUrl}/gifts/hi`;

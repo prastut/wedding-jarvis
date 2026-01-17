@@ -38,6 +38,8 @@ export const config = {
     delayMs: parseInt(optionalEnv('BROADCAST_DELAY_MS', '100'), 10),
   },
 
+  publicUrl: optionalEnv('PUBLIC_URL', 'https://wedding-jarvis-production.up.railway.app'),
+
   testPhoneNumbers: optionalEnv('TEST_PHONE_NUMBERS', '').split(',').filter(Boolean),
 };
 

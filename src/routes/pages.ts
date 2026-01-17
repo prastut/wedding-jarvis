@@ -51,9 +51,7 @@ async function getDressCodeContent(language: UserLanguage): Promise<string> {
     .filter((event: DressCodeEvent) => event.dress_code)
     .map((event: DressCodeEvent) => {
       const name =
-        (language === 'HI' && event.name_hi) ||
-        (language === 'PA' && event.name_pa) ||
-        event.name;
+        (language === 'HI' && event.name_hi) || (language === 'PA' && event.name_pa) || event.name;
 
       const dressCode =
         (language === 'HI' && event.dress_code_hi) ||

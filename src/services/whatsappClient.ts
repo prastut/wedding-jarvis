@@ -109,29 +109,42 @@ async function sendInteractiveMessage(
   return response.json() as Promise<WhatsAppSendResponse>;
 }
 
+export interface ReplyButtonsOptions {
+  /** Optional header text (max 60 characters) - ignored if imageUrl is provided */
+  headerText?: string;
+  /** Optional image URL for header (must be HTTPS) */
+  imageUrl?: string;
+}
+
 /**
  * Send interactive reply buttons (max 3 buttons)
  *
  * @param to - Recipient phone number
  * @param bodyText - Message body text (max 1024 characters)
  * @param buttons - Array of buttons (max 3, each title max 20 characters)
- * @param headerText - Optional header text (max 60 characters)
+ * @param options - Optional header text or image URL
  * @returns WhatsApp API response
  *
  * @example
  * ```ts
+ * // With text header
  * await sendReplyButtons(phoneNumber, 'Select your language:', [
  *   { id: 'lang_en', title: 'English' },
  *   { id: 'lang_hi', title: 'हिंदी' },
  *   { id: 'lang_pa', title: 'ਪੰਜਾਬੀ' },
  * ]);
+ *
+ * // With image header
+ * await sendReplyButtons(phoneNumber, 'Welcome!', buttons, {
+ *   imageUrl: 'https://example.com/welcome.jpg'
+ * });
  * ```
  */
 export async function sendReplyButtons(
   to: string,
   bodyText: string,
   buttons: ReplyButton[],
-  headerText?: string
+  options?: string | ReplyButtonsOptions
 ): Promise<WhatsAppSendResponse> {
   // Validate button count
   if (buttons.length > 3) {
@@ -141,6 +154,10 @@ export async function sendReplyButtons(
   if (buttons.length === 0) {
     throw new Error('At least one button is required');
   }
+
+  // Handle legacy string parameter (headerText)
+  const opts: ReplyButtonsOptions =
+    typeof options === 'string' ? { headerText: options } : options || {};
 
   // Build interactive payload with truncation for safety
   const interactive: InteractivePayload = {
@@ -157,8 +174,11 @@ export async function sendReplyButtons(
     },
   };
 
-  if (headerText) {
-    interactive.header = { type: 'text', text: headerText.substring(0, 60) };
+  // Add header - image takes priority over text
+  if (opts.imageUrl) {
+    interactive.header = { type: 'image', image: { link: opts.imageUrl } };
+  } else if (opts.headerText) {
+    interactive.header = { type: 'text', text: opts.headerText.substring(0, 60) };
   }
 
   return sendInteractiveMessage(to, interactive);

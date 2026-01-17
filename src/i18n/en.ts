@@ -89,18 +89,21 @@ export const messages = {
   'rsvp.countPrompt': 'How many guests will be attending (including yourself)?',
   'rsvp.countButton': 'Select Count',
   'rsvp.count.10plus': '10+ guests',
-  'rsvp.confirmed.yes': "\u{1F4CB} *Your RSVP*\n\nStatus: Attending \u{2705}\nGuests: {count}\n\nNeed to make changes?",
-  'rsvp.confirmed.no': "\u{1F4CB} *Your RSVP*\n\nStatus: Not Attending\n\nNeed to make changes?",
-  'rsvp.thankYou.yes': 'Thank you for confirming! We look forward to celebrating with you. \u{1F389}',
+  'rsvp.confirmed.yes':
+    '\u{1F4CB} *Your RSVP*\n\nStatus: Attending \u{2705}\nGuests: {count}\n\nNeed to make changes?',
+  'rsvp.confirmed.no': '\u{1F4CB} *Your RSVP*\n\nStatus: Not Attending\n\nNeed to make changes?',
+  'rsvp.thankYou.yes':
+    'Thank you for confirming! We look forward to celebrating with you. \u{1F389}',
   'rsvp.thankYou.no': "Thank you for letting us know. We'll miss you! \u{1F499}",
-  'rsvp.thankYou.10plus': "Thank you! Our team will reach out soon to confirm details for your larger group. \u{1F389}",
+  'rsvp.thankYou.10plus':
+    'Thank you! Our team will reach out soon to confirm details for your larger group. \u{1F389}',
   'rsvp.button.update': 'Update RSVP',
   'rsvp.button.back': 'Back to Menu',
 
   // ============================================================
   // RESET FLOW
   // ============================================================
-  'reset.confirm': 'Your language and side preferences have been reset. Let\'s start fresh!',
+  'reset.confirm': "Your language and side preferences have been reset. Let's start fresh!",
 
   // ============================================================
   // FALLBACK / ERRORS
@@ -128,27 +131,33 @@ export const messages = {
   // ============================================================
   // TRAVEL INFO
   // ============================================================
-  'travel.info': '*Travel & Stay*\n\nAccommodation and travel details will be shared soon. For immediate assistance, please contact the emergency numbers.',
+  'travel.info':
+    '*Travel & Stay*\n\nAccommodation and travel details will be shared soon. For immediate assistance, please contact the emergency numbers.',
 
   // ============================================================
   // GIFT REGISTRY
   // ============================================================
-  'gifts.info': '*Gift Registry*\n\nYour presence at our wedding is the greatest gift of all. However, if you wish to bless us, please visit our registry:\n\n{giftsLink}',
+  'gifts.info':
+    '*Gift Registry*\n\nYour presence at our wedding is the greatest gift of all. However, if you wish to bless us, please visit our registry:\n\n{giftsLink}',
 
   // Gift Registry Page
   'gifts.page.title': 'Gift Registry',
   'gifts.page.description': 'Blessing the couple on their new journey',
   'gifts.page.presenceTitle': 'Your Presence',
-  'gifts.page.presenceText': 'Your presence at our wedding is the greatest gift of all. We are truly honored to have you celebrate this special day with us.',
+  'gifts.page.presenceText':
+    'Your presence at our wedding is the greatest gift of all. We are truly honored to have you celebrate this special day with us.',
   'gifts.page.blessingTitle': 'Blessings & Shagun',
-  'gifts.page.blessingText': 'If you wish to bless us, your love and good wishes mean the world to us. For those who prefer to give shagun, please feel free to do so in person or reach out to the family.',
+  'gifts.page.blessingText':
+    'If you wish to bless us, your love and good wishes mean the world to us. For those who prefer to give shagun, please feel free to do so in person or reach out to the family.',
   'gifts.page.contactTitle': 'Contact Us',
-  'gifts.page.contactText': 'For any questions about gifts or contributions, please contact the family coordinators listed in the Emergency Contact section of the bot.',
+  'gifts.page.contactText':
+    'For any questions about gifts or contributions, please contact the family coordinators listed in the Emergency Contact section of the bot.',
 
   // ============================================================
   // POST-WEDDING
   // ============================================================
-  'postWedding.thankYou': "Thank you for being part of Sanjoli & Shreyas's wedding celebration! \u{1F496}\n\nWe hope you had a wonderful time. For any queries, feel free to reach out to the family.",
+  'postWedding.thankYou':
+    "Thank you for being part of Sanjoli & Shreyas's wedding celebration! \u{1F496}\n\nWe hope you had a wonderful time. For any queries, feel free to reach out to the family.",
 
   // ============================================================
   // OPT-OUT/OPT-IN
