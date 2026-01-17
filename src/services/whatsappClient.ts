@@ -1,6 +1,6 @@
 import { config } from '../config';
 import type { WhatsAppSendResponse } from '../types';
-import type { ReplyButton, ListRow, ListSection, InteractivePayload } from '../types/whatsapp';
+import type { ReplyButton, ListSection, InteractivePayload } from '../types/whatsapp';
 
 // Re-export types for convenience
 export type { ReplyButton, ListRow, ListSection } from '../types/whatsapp';

@@ -1,14 +1,11 @@
 import { getSupabase } from '../db/client';
 import type { Event, Venue, FAQ, CoordinatorContact } from '../types';
-import { sendReplyButtons, sendListMessage } from './whatsappClient';
 import {
   parseInteractiveMessage,
   isLanguageId,
   isSideId,
   extractLanguage,
   extractSide,
-  LANG_IDS,
-  SIDE_IDS,
   MENU_IDS,
 } from '../constants/buttonIds';
 
