@@ -90,7 +90,7 @@ _PR-01 and PR-02 can run in parallel after PR-00 is validated._
 | PR    | Title                              | Parallel | Status  | Dependencies |
 | ----- | ---------------------------------- | -------- | ------- | ------------ |
 | PR-05 | Event Schedule (Side-Filtered)     | A        | ✅ Done | PR-04        |
-| PR-06 | Venue Details                      | A        | Pending | PR-04        |
+| PR-06 | Venue Details                      | A        | ✅ Done | PR-04        |
 | PR-07 | Emergency Contacts (Side-Specific) | A        | Pending | PR-04        |
 | PR-08 | FAQs + Travel + Gifts              | A        | Pending | PR-04        |
 | PR-09 | RSVP Complete Flow                 | A        | Pending | PR-04        |
@@ -585,7 +585,7 @@ curl -X POST http://localhost:3000/test-interactive/list?to=YOUR_PHONE
 | PR-03 | 2026-01-17 | PR-03-onboarding-flow.md     | Onboarding flow: language → side → menu          |
 | PR-04 | 2026-01-17 | PR-04-i18n-system.md         | i18n system + EN/HI/PA translations + dress code |
 | PR-05 | 2026-01-17 | PR-05-event-schedule.md      | Events repository + side-filtered schedule       |
-| PR-06 | -          | -                            | Parallel Group A                                 |
+| PR-06 | 2026-01-17 | PR-06-venue-details.md       | Venue display with translations + maps           |
 | PR-07 | -          | -                            | Parallel Group A                                 |
 | PR-08 | -          | -                            | Parallel Group A                                 |
 | PR-09 | -          | -                            | Parallel Group A                                 |
