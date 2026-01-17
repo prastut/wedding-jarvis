@@ -40,100 +40,67 @@ export interface DashboardStats {
 export async function getDashboardStats(): Promise<DashboardStats> {
   const supabase = getSupabase();
 
-  // Get guest counts
-  const { count: totalGuests } = await supabase
-    .from('guests')
-    .select('*', { count: 'exact', head: true });
-
-  const { count: optedInGuests } = await supabase
-    .from('guests')
-    .select('*', { count: 'exact', head: true })
-    .eq('opted_in', true);
-
-  // Onboarded = has both language and side set
-  const { count: onboardedGuests } = await supabase
-    .from('guests')
-    .select('*', { count: 'exact', head: true })
-    .not('user_language', 'is', null)
-    .not('user_side', 'is', null);
-
-  // RSVP counts
-  const { count: rsvpYes } = await supabase
-    .from('guests')
-    .select('*', { count: 'exact', head: true })
-    .eq('rsvp_status', 'YES');
-
-  const { count: rsvpNo } = await supabase
-    .from('guests')
-    .select('*', { count: 'exact', head: true })
-    .eq('rsvp_status', 'NO');
-
-  // Total headcount - sum of rsvp_guest_count for attending guests
-  const { data: headcountData } = await supabase
-    .from('guests')
-    .select('rsvp_guest_count')
-    .eq('rsvp_status', 'YES')
-    .not('rsvp_guest_count', 'is', null);
+  // Run all queries in parallel for better performance
+  const [
+    { count: totalGuests },
+    { count: optedInGuests },
+    { count: onboardedGuests },
+    { count: rsvpYes },
+    { count: rsvpNo },
+    { data: headcountData },
+    { count: groomSide },
+    { count: brideSide },
+    { count: langEn },
+    { count: langHi },
+    { count: langPa },
+    { count: totalMessages },
+    { count: inboundMessages },
+    { data: lastMessage },
+    { count: totalBroadcasts },
+    { count: completedBroadcasts },
+  ] = await Promise.all([
+    // Guest counts
+    supabase.from('guests').select('*', { count: 'exact', head: true }),
+    supabase.from('guests').select('*', { count: 'exact', head: true }).eq('opted_in', true),
+    supabase
+      .from('guests')
+      .select('*', { count: 'exact', head: true })
+      .not('user_language', 'is', null)
+      .not('user_side', 'is', null),
+    // RSVP counts
+    supabase.from('guests').select('*', { count: 'exact', head: true }).eq('rsvp_status', 'YES'),
+    supabase.from('guests').select('*', { count: 'exact', head: true }).eq('rsvp_status', 'NO'),
+    // Headcount
+    supabase
+      .from('guests')
+      .select('rsvp_guest_count')
+      .eq('rsvp_status', 'YES')
+      .not('rsvp_guest_count', 'is', null),
+    // By side
+    supabase.from('guests').select('*', { count: 'exact', head: true }).eq('user_side', 'GROOM'),
+    supabase.from('guests').select('*', { count: 'exact', head: true }).eq('user_side', 'BRIDE'),
+    // By language
+    supabase.from('guests').select('*', { count: 'exact', head: true }).eq('user_language', 'EN'),
+    supabase.from('guests').select('*', { count: 'exact', head: true }).eq('user_language', 'HI'),
+    supabase.from('guests').select('*', { count: 'exact', head: true }).eq('user_language', 'PA'),
+    // Messages
+    supabase.from('message_logs').select('*', { count: 'exact', head: true }),
+    supabase.from('message_logs').select('*', { count: 'exact', head: true }).eq('direction', 'inbound'),
+    supabase
+      .from('message_logs')
+      .select('created_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single(),
+    // Broadcasts
+    supabase.from('broadcasts').select('*', { count: 'exact', head: true }),
+    supabase.from('broadcasts').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
+  ]);
 
   const totalHeadcount = (headcountData || []).reduce(
     (sum, g) => sum + (g.rsvp_guest_count || 0),
     0
   );
-
-  // By side counts
-  const { count: groomSide } = await supabase
-    .from('guests')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_side', 'GROOM');
-
-  const { count: brideSide } = await supabase
-    .from('guests')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_side', 'BRIDE');
-
-  // By language counts
-  const { count: langEn } = await supabase
-    .from('guests')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_language', 'EN');
-
-  const { count: langHi } = await supabase
-    .from('guests')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_language', 'HI');
-
-  const { count: langPa } = await supabase
-    .from('guests')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_language', 'PA');
-
-  // Get message counts
-  const { count: totalMessages } = await supabase
-    .from('message_logs')
-    .select('*', { count: 'exact', head: true });
-
-  const { count: inboundMessages } = await supabase
-    .from('message_logs')
-    .select('*', { count: 'exact', head: true })
-    .eq('direction', 'inbound');
-
-  // Get last activity
-  const { data: lastMessage } = await supabase
-    .from('message_logs')
-    .select('created_at')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  // Get broadcast counts
-  const { count: totalBroadcasts } = await supabase
-    .from('broadcasts')
-    .select('*', { count: 'exact', head: true });
-
-  const { count: completedBroadcasts } = await supabase
-    .from('broadcasts')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'completed');
 
   const total = totalGuests || 0;
   const onboarded = onboardedGuests || 0;
