@@ -16,8 +16,8 @@ export const messages = {
   // ============================================================
   'side.thankYou': 'Thank you! \u{1F64F}',
   'side.selectPrompt': 'Please select your side:',
-  'side.button.groom': "Groom's Side (Shreyas)",
-  'side.button.bride': "Bride's Side (Sanjoli)",
+  'side.button.groom': 'Groom (Shreyas)',
+  'side.button.bride': 'Bride (Sanjoli)',
 
   // ============================================================
   // ONBOARDING COMPLETE

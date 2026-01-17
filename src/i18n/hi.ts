@@ -18,8 +18,8 @@ export const messages: Record<MessageKey, string> = {
   // ============================================================
   'side.thankYou': 'धन्यवाद! \u{1F64F}',
   'side.selectPrompt': 'कृपया अपना पक्ष चुनें:',
-  'side.button.groom': 'वर पक्ष (श्रेयस)',
-  'side.button.bride': 'वधू पक्ष (संजोली)',
+  'side.button.groom': 'वर (श्रेयस)',
+  'side.button.bride': 'वधू (संजोली)',
 
   // ============================================================
   // ONBOARDING COMPLETE
