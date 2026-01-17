@@ -16,6 +16,8 @@ I want you to implement the next PR.
 
 ## During Implementation
 
+First check if we are on main branch, if we are not then give error. If we are then, switch to a new branch with relevant name.
+
 Implement the PR according to its specification in the tracker. Follow the existing code patterns in the codebase (see CLAUDE.md for conventions).
 
 ## After Completing a PR
@@ -23,8 +25,6 @@ Implement the PR according to its specification in the tracker. Follow the exist
 1. Generate a report file at `docs/reports/bot-upgrade/PR-{XX}-{slug}.md` using the template in the tracker
 2. Update the Completion Log table in `docs/tracking/bot-upgrade-tracker.md`
 3. Commit all changes with a descriptive message
-
-Please don't git push or merge. I am using Conductor to manage git worktrees. I will do it manually from Conductor UI
 ```
 
 ---
