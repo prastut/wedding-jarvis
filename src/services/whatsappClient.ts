@@ -1,24 +1,11 @@
 import { config } from '../config';
 import type { WhatsAppSendResponse } from '../types';
+import type { ReplyButton, ListRow, ListSection, InteractivePayload } from '../types/whatsapp';
+
+// Re-export types for convenience
+export type { ReplyButton, ListRow, ListSection } from '../types/whatsapp';
 
 const WHATSAPP_API_URL = 'https://graph.facebook.com/v18.0';
-
-// Types for interactive messages
-export interface ReplyButton {
-  id: string;
-  title: string; // Max 20 characters
-}
-
-export interface ListRow {
-  id: string;
-  title: string; // Max 24 characters
-  description?: string; // Max 72 characters
-}
-
-export interface ListSection {
-  title?: string; // Max 24 characters
-  rows: ListRow[];
-}
 
 export interface SendMessageOptions {
   to: string;
@@ -89,38 +76,14 @@ export async function sendTemplateMessage(
 }
 
 /**
- * Send interactive reply buttons (max 3 buttons)
- * Button titles max 20 characters
+ * Send an interactive message to WhatsApp
+ * @internal Used by sendReplyButtons and sendListMessage
  */
-export async function sendReplyButtons(
+async function sendInteractiveMessage(
   to: string,
-  bodyText: string,
-  buttons: ReplyButton[],
-  headerText?: string
+  interactive: InteractivePayload
 ): Promise<WhatsAppSendResponse> {
-  if (buttons.length > 3) {
-    throw new Error('Reply buttons limited to 3 maximum');
-  }
-
   const url = `${WHATSAPP_API_URL}/${config.whatsapp.phoneNumberId}/messages`;
-
-  const interactive: Record<string, unknown> = {
-    type: 'button',
-    body: { text: bodyText },
-    action: {
-      buttons: buttons.map((btn) => ({
-        type: 'reply',
-        reply: {
-          id: btn.id,
-          title: btn.title.substring(0, 20),
-        },
-      })),
-    },
-  };
-
-  if (headerText) {
-    interactive.header = { type: 'text', text: headerText };
-  }
 
   const response = await fetch(url, {
     method: 'POST',
@@ -139,7 +102,7 @@ export async function sendReplyButtons(
 
   if (!response.ok) {
     const error = await response.json();
-    console.error('WhatsApp API error (reply buttons):', error);
+    console.error('[INTERACTIVE] WhatsApp API error:', error);
     throw new Error(`WhatsApp API error: ${response.status} - ${JSON.stringify(error)}`);
   }
 
@@ -147,7 +110,85 @@ export async function sendReplyButtons(
 }
 
 /**
- * Send interactive list message (max 10 items total across sections)
+ * Send interactive reply buttons (max 3 buttons)
+ *
+ * @param to - Recipient phone number
+ * @param bodyText - Message body text (max 1024 characters)
+ * @param buttons - Array of buttons (max 3, each title max 20 characters)
+ * @param headerText - Optional header text (max 60 characters)
+ * @returns WhatsApp API response
+ *
+ * @example
+ * ```ts
+ * await sendReplyButtons(phoneNumber, 'Select your language:', [
+ *   { id: 'lang_en', title: 'English' },
+ *   { id: 'lang_hi', title: 'हिंदी' },
+ *   { id: 'lang_pa', title: 'ਪੰਜਾਬੀ' },
+ * ]);
+ * ```
+ */
+export async function sendReplyButtons(
+  to: string,
+  bodyText: string,
+  buttons: ReplyButton[],
+  headerText?: string
+): Promise<WhatsAppSendResponse> {
+  // Validate button count
+  if (buttons.length > 3) {
+    throw new Error(`Reply buttons limited to 3 maximum, got ${buttons.length}`);
+  }
+
+  if (buttons.length === 0) {
+    throw new Error('At least one button is required');
+  }
+
+  // Build interactive payload with truncation for safety
+  const interactive: InteractivePayload = {
+    type: 'button',
+    body: { text: bodyText.substring(0, 1024) },
+    action: {
+      buttons: buttons.map((btn) => ({
+        type: 'reply' as const,
+        reply: {
+          id: btn.id,
+          title: btn.title.substring(0, 20),
+        },
+      })),
+    },
+  };
+
+  if (headerText) {
+    interactive.header = { type: 'text', text: headerText.substring(0, 60) };
+  }
+
+  return sendInteractiveMessage(to, interactive);
+}
+
+/**
+ * Send interactive list message (max 10 items total across all sections)
+ *
+ * @param to - Recipient phone number
+ * @param bodyText - Message body text (max 1024 characters)
+ * @param buttonText - Text for the button that opens the list (max 20 characters)
+ * @param sections - Array of sections, each containing rows
+ * @param headerText - Optional header text (max 60 characters)
+ * @returns WhatsApp API response
+ *
+ * @example
+ * ```ts
+ * await sendListMessage(
+ *   phoneNumber,
+ *   'How can I help you today?',
+ *   'View Options',
+ *   [{
+ *     title: 'Main Menu',
+ *     rows: [
+ *       { id: 'menu_schedule', title: 'Event Schedule', description: 'View all wedding events' },
+ *       { id: 'menu_venue', title: 'Venue & Directions', description: 'Get venue details' },
+ *     ]
+ *   }]
+ * );
+ * ```
  */
 export async function sendListMessage(
   to: string,
@@ -156,16 +197,20 @@ export async function sendListMessage(
   sections: ListSection[],
   headerText?: string
 ): Promise<WhatsAppSendResponse> {
+  // Validate total row count
   const totalRows = sections.reduce((sum, s) => sum + s.rows.length, 0);
   if (totalRows > 10) {
-    throw new Error('List message limited to 10 items total');
+    throw new Error(`List message limited to 10 items total, got ${totalRows}`);
   }
 
-  const url = `${WHATSAPP_API_URL}/${config.whatsapp.phoneNumberId}/messages`;
+  if (totalRows === 0) {
+    throw new Error('At least one list item is required');
+  }
 
-  const interactive: Record<string, unknown> = {
+  // Build interactive payload with truncation for safety
+  const interactive: InteractivePayload = {
     type: 'list',
-    body: { text: bodyText },
+    body: { text: bodyText.substring(0, 1024) },
     action: {
       button: buttonText.substring(0, 20),
       sections: sections.map((section) => ({
@@ -180,29 +225,8 @@ export async function sendListMessage(
   };
 
   if (headerText) {
-    interactive.header = { type: 'text', text: headerText };
+    interactive.header = { type: 'text', text: headerText.substring(0, 60) };
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${config.whatsapp.accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      messaging_product: 'whatsapp',
-      recipient_type: 'individual',
-      to,
-      type: 'interactive',
-      interactive,
-    }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    console.error('WhatsApp API error (list message):', error);
-    throw new Error(`WhatsApp API error: ${response.status} - ${JSON.stringify(error)}`);
-  }
-
-  return response.json() as Promise<WhatsAppSendResponse>;
+  return sendInteractiveMessage(to, interactive);
 }
