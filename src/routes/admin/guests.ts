@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { getAllGuests } from '../../repositories/guests';
+import { getAllGuests, GuestFilters } from '../../repositories/guests';
+import type { UserLanguage, UserSide } from '../../types';
 
 const router = Router();
 
@@ -12,6 +13,35 @@ router.get('/', async (req: Request, res: Response) => {
     const optedIn =
       req.query.opted_in === 'true' ? true : req.query.opted_in === 'false' ? false : undefined;
 
+    // New filters for language, side, and RSVP status
+    const languageParam = req.query.language as string | undefined;
+    const sideParam = req.query.side as string | undefined;
+    const rsvpParam = req.query.rsvp as string | undefined;
+
+    // Parse language filter
+    let language: GuestFilters['language'];
+    if (languageParam === 'not_set') {
+      language = 'not_set';
+    } else if (languageParam && ['EN', 'HI', 'PA'].includes(languageParam)) {
+      language = languageParam as UserLanguage;
+    }
+
+    // Parse side filter
+    let side: GuestFilters['side'];
+    if (sideParam === 'not_set') {
+      side = 'not_set';
+    } else if (sideParam && ['GROOM', 'BRIDE'].includes(sideParam)) {
+      side = sideParam as UserSide;
+    }
+
+    // Parse RSVP filter
+    let rsvpStatus: GuestFilters['rsvpStatus'];
+    if (rsvpParam === 'pending') {
+      rsvpStatus = 'pending';
+    } else if (rsvpParam && ['YES', 'NO'].includes(rsvpParam)) {
+      rsvpStatus = rsvpParam as 'YES' | 'NO';
+    }
+
     const offset = (page - 1) * limit;
 
     const { guests, total } = await getAllGuests({
@@ -19,6 +49,9 @@ router.get('/', async (req: Request, res: Response) => {
       offset,
       search,
       optedIn,
+      language,
+      side,
+      rsvpStatus,
     });
 
     res.json({
@@ -42,14 +75,96 @@ router.get('/export', async (req: Request, res: Response) => {
     const optedIn =
       req.query.opted_in === 'true' ? true : req.query.opted_in === 'false' ? false : undefined;
 
-    const { guests } = await getAllGuests({ limit: 10000, optedIn });
+    // Parse filters for export
+    const languageParam = req.query.language as string | undefined;
+    const sideParam = req.query.side as string | undefined;
+    const rsvpParam = req.query.rsvp as string | undefined;
 
-    // Build CSV
-    const headers = ['phone_number', 'name', 'opted_in', 'first_seen_at', 'last_inbound_at'];
+    let language: GuestFilters['language'];
+    if (languageParam === 'not_set') {
+      language = 'not_set';
+    } else if (languageParam && ['EN', 'HI', 'PA'].includes(languageParam)) {
+      language = languageParam as UserLanguage;
+    }
+
+    let side: GuestFilters['side'];
+    if (sideParam === 'not_set') {
+      side = 'not_set';
+    } else if (sideParam && ['GROOM', 'BRIDE'].includes(sideParam)) {
+      side = sideParam as UserSide;
+    }
+
+    let rsvpStatus: GuestFilters['rsvpStatus'];
+    if (rsvpParam === 'pending') {
+      rsvpStatus = 'pending';
+    } else if (rsvpParam && ['YES', 'NO'].includes(rsvpParam)) {
+      rsvpStatus = rsvpParam as 'YES' | 'NO';
+    }
+
+    const { guests } = await getAllGuests({
+      limit: 10000,
+      optedIn,
+      language,
+      side,
+      rsvpStatus,
+    });
+
+    // Build CSV with new columns
+    const headers = [
+      'phone_number',
+      'name',
+      'opted_in',
+      'language',
+      'side',
+      'rsvp_status',
+      'guest_count',
+      'first_seen_at',
+      'last_inbound_at',
+    ];
+
+    const formatLanguage = (lang: string | null): string => {
+      switch (lang) {
+        case 'EN':
+          return 'English';
+        case 'HI':
+          return 'Hindi';
+        case 'PA':
+          return 'Punjabi';
+        default:
+          return '';
+      }
+    };
+
+    const formatSide = (s: string | null): string => {
+      switch (s) {
+        case 'GROOM':
+          return 'Groom';
+        case 'BRIDE':
+          return 'Bride';
+        default:
+          return '';
+      }
+    };
+
+    const formatRsvp = (status: string | null): string => {
+      switch (status) {
+        case 'YES':
+          return 'Attending';
+        case 'NO':
+          return 'Not Attending';
+        default:
+          return 'Pending';
+      }
+    };
+
     const rows = guests.map((g) => [
       g.phone_number,
       g.name || '',
       g.opted_in ? 'Yes' : 'No',
+      formatLanguage(g.user_language),
+      formatSide(g.user_side),
+      formatRsvp(g.rsvp_status),
+      g.rsvp_guest_count !== null ? String(g.rsvp_guest_count) : '',
       g.first_seen_at,
       g.last_inbound_at || '',
     ]);

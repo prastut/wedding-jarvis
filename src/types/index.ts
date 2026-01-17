@@ -86,6 +86,8 @@ export interface Broadcast {
   id: string;
   topic: string;
   message: string;
+  message_hi: string | null;
+  message_pa: string | null;
   template_name: string | null;
   status: 'draft' | 'pending' | 'sending' | 'completed' | 'failed';
   sent_count: number;

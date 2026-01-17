@@ -23,6 +23,7 @@ import {
 import {
   sendReplyButtons,
   sendListMessage,
+  sendTextMessage,
   type ReplyButton,
   type ListSection,
 } from './whatsappClient';
@@ -45,6 +46,15 @@ import {
 // Simple in-memory cache (5 minute TTL)
 const cache: Map<string, { data: string; expires: number }> = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Check if post-wedding mode is enabled
+ * Set POST_WEDDING_MODE=enabled in environment to activate
+ * When enabled, bot shows thank you message instead of normal menu
+ */
+function isPostWedding(): boolean {
+  return process.env.POST_WEDDING_MODE?.toLowerCase() === 'enabled';
+}
 
 function getCached(key: string): string | null {
   const entry = cache.get(key);
@@ -88,6 +98,12 @@ export async function handleMessage(guest: Guest, messageText: string): Promise<
       return null;
     }
     await showMainMenu(guest.phone_number, guest.user_language);
+    return null;
+  }
+
+  // Check if wedding has ended - show thank you message
+  if (isPostWedding()) {
+    await sendPostWeddingMessage(guest);
     return null;
   }
 
@@ -390,6 +406,30 @@ async function sendContentWithBackButton(
     console.log(`[INTERACTIVE] Sent content with back button to ${phoneNumber}`);
   } catch (error) {
     console.error(`[INTERACTIVE] Failed to send content with back button:`, error);
+    throw error;
+  }
+}
+
+// ============================================================
+// POST-WEDDING BEHAVIOR
+// ============================================================
+
+/**
+ * Send thank you message after the wedding has ended
+ * Uses guest's language if available, falls back to English
+ */
+async function sendPostWeddingMessage(guest: Guest): Promise<void> {
+  const language = guest.user_language || 'EN';
+  const message = getMessage('postWedding.thankYou', language);
+
+  try {
+    await sendTextMessage({
+      to: guest.phone_number,
+      text: message,
+    });
+    console.log(`[POST-WEDDING] Sent thank you message to ${guest.phone_number}`);
+  } catch (error) {
+    console.error(`[POST-WEDDING] Failed to send thank you message:`, error);
     throw error;
   }
 }

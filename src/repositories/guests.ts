@@ -61,16 +61,21 @@ export async function getOptedInGuests(): Promise<Guest[]> {
   return data || [];
 }
 
+export interface GuestFilters {
+  limit?: number;
+  offset?: number;
+  search?: string;
+  optedIn?: boolean;
+  language?: UserLanguage | 'not_set';
+  side?: UserSide | 'not_set';
+  rsvpStatus?: 'YES' | 'NO' | 'pending';
+}
+
 export async function getAllGuests(
-  options: {
-    limit?: number;
-    offset?: number;
-    search?: string;
-    optedIn?: boolean;
-  } = {}
+  options: GuestFilters = {}
 ): Promise<{ guests: Guest[]; total: number }> {
   const supabase = getSupabase();
-  const { limit = 50, offset = 0, search, optedIn } = options;
+  const { limit = 50, offset = 0, search, optedIn, language, side, rsvpStatus } = options;
 
   let query = supabase.from('guests').select('*', { count: 'exact' });
 
@@ -80,6 +85,27 @@ export async function getAllGuests(
 
   if (optedIn !== undefined) {
     query = query.eq('opted_in', optedIn);
+  }
+
+  // Language filter
+  if (language === 'not_set') {
+    query = query.is('user_language', null);
+  } else if (language) {
+    query = query.eq('user_language', language);
+  }
+
+  // Side filter
+  if (side === 'not_set') {
+    query = query.is('user_side', null);
+  } else if (side) {
+    query = query.eq('user_side', side);
+  }
+
+  // RSVP status filter
+  if (rsvpStatus === 'pending') {
+    query = query.is('rsvp_status', null);
+  } else if (rsvpStatus) {
+    query = query.eq('rsvp_status', rsvpStatus);
   }
 
   const { data, error, count } = await query

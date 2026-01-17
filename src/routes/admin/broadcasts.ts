@@ -65,7 +65,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST /api/admin/broadcasts - Create broadcast
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { topic, message, template_name } = req.body;
+    const { topic, message, message_hi, message_pa, template_name } = req.body;
 
     if (!topic || !message) {
       res.status(400).json({ error: 'Topic and message are required' });
@@ -80,6 +80,8 @@ router.post('/', async (req: Request, res: Response) => {
       .insert({
         topic,
         message,
+        message_hi: message_hi || null,
+        message_pa: message_pa || null,
         template_name: template_name || null,
         status: 'draft',
         idempotency_key: idempotencyKey,
@@ -100,7 +102,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.patch('/:id', async (req: Request, res: Response) => {
   try {
     const supabase = getSupabase();
-    const { topic, message, template_name } = req.body;
+    const { topic, message, message_hi, message_pa, template_name } = req.body;
 
     // Check broadcast exists and is in draft status
     const { data: existing } = await supabase
@@ -122,6 +124,8 @@ router.patch('/:id', async (req: Request, res: Response) => {
     const updates: Partial<Broadcast> = {};
     if (topic !== undefined) updates.topic = topic;
     if (message !== undefined) updates.message = message;
+    if (message_hi !== undefined) updates.message_hi = message_hi || null;
+    if (message_pa !== undefined) updates.message_pa = message_pa || null;
     if (template_name !== undefined) updates.template_name = template_name;
 
     const { data: broadcast, error } = await supabase

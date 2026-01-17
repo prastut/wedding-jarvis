@@ -104,9 +104,9 @@ _All 6 PRs in Phase 3 can run in parallel - they only depend on the menu being i
 
 | PR    | Title                                          | Parallel | Status  | Dependencies     |
 | ----- | ---------------------------------------------- | -------- | ------- | ---------------- |
-| PR-11 | Post-Wedding Behavior                          | B        | Pending | Phase 3 complete |
-| PR-12 | Admin: Guest Columns + Filters + Stats         | B        | Pending | PR-01            |
-| PR-13 | Admin: Multi-Language Broadcasts               | C        | Pending | PR-12            |
+| PR-11 | Post-Wedding Behavior                          | B        | ✅ Done | Phase 3 complete |
+| PR-12 | Admin: Guest Columns + Filters + Stats         | B        | ✅ Done | PR-01            |
+| PR-13 | Admin: Multi-Language Broadcasts               | C        | ✅ Done | PR-12            |
 | PR-14 | Admin: Content Management (Events/Venues/FAQs) | C        | Pending | PR-12            |
 
 _PR-11 and PR-12 can run in parallel. PR-13 and PR-14 can run in parallel after PR-12._
@@ -590,10 +590,10 @@ curl -X POST http://localhost:3000/test-interactive/list?to=YOUR_PHONE
 | PR-08 | 2026-01-17 | PR-08-faqs-travel-gifts.md   | FAQs + Travel + Gifts with /gifts page           |
 | PR-09 | 2026-01-17 | PR-09-rsvp-flow.md           | Complete RSVP flow with count selection          |
 | PR-10 | 2026-01-17 | PR-10-reset-fallback.md      | Reset flow + improved fallback handling          |
-| PR-11 | -          | -                            | Parallel Group B                                 |
-| PR-12 | -          | -                            | Parallel Group B                                 |
-| PR-13 | -          | -                            | Parallel Group C                                 |
-| PR-14 | -          | -                            | Parallel Group C                                 |
+| PR-11 | 2026-01-17 | PR-11-post-wedding.md              | Post-wedding thank you mode with env toggle      |
+| PR-12 | 2026-01-17 | PR-12-admin-guests-filters-stats.md | Guest columns + filters + dashboard stats        |
+| PR-13 | 2026-01-17 | PR-13-multi-language-broadcasts.md | Multi-language broadcast form + send logic       |
+| PR-14 | 2026-01-17 | PR-14-admin-content-management.md  | Events/Venues/FAQs/Contacts CRUD                 |
 
 ---
 

@@ -46,6 +46,71 @@ export default function Dashboard() {
         </div>
 
         <div className="stat-card">
+          <h3>Onboarded</h3>
+          <div className="stat-value">{stats.guests.onboardedPercent}%</div>
+          <div className="stat-detail">
+            <span>{stats.guests.onboarded} of {stats.guests.total} guests</span>
+          </div>
+        </div>
+
+        <div className="stat-card highlight">
+          <h3>RSVP Status</h3>
+          <div className="stat-value">{stats.rsvp.attending}</div>
+          <div className="stat-subtitle">attending</div>
+          <div className="stat-detail">
+            <span className="positive">{stats.rsvp.attending} yes</span>
+            <span className="negative">{stats.rsvp.notAttending} no</span>
+            <span className="neutral">{stats.rsvp.pending} pending</span>
+          </div>
+        </div>
+
+        <div className="stat-card highlight">
+          <h3>Total Headcount</h3>
+          <div className="stat-value">{stats.rsvp.totalHeadcount}</div>
+          <div className="stat-subtitle">confirmed guests</div>
+        </div>
+
+        <div className="stat-card">
+          <h3>By Side</h3>
+          <div className="stat-breakdown">
+            <div className="breakdown-row">
+              <span className="label">Groom</span>
+              <span className="value">{stats.bySide.groom}</span>
+            </div>
+            <div className="breakdown-row">
+              <span className="label">Bride</span>
+              <span className="value">{stats.bySide.bride}</span>
+            </div>
+            <div className="breakdown-row muted">
+              <span className="label">Not Onboarded</span>
+              <span className="value">{stats.bySide.notOnboarded}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <h3>By Language</h3>
+          <div className="stat-breakdown">
+            <div className="breakdown-row">
+              <span className="label">English</span>
+              <span className="value">{stats.byLanguage.english}</span>
+            </div>
+            <div className="breakdown-row">
+              <span className="label">Hindi</span>
+              <span className="value">{stats.byLanguage.hindi}</span>
+            </div>
+            <div className="breakdown-row">
+              <span className="label">Punjabi</span>
+              <span className="value">{stats.byLanguage.punjabi}</span>
+            </div>
+            <div className="breakdown-row muted">
+              <span className="label">Not Set</span>
+              <span className="value">{stats.byLanguage.notSet}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
           <h3>Messages</h3>
           <div className="stat-value">{stats.messages.total}</div>
           <div className="stat-detail">

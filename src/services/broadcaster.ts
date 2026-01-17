@@ -3,12 +3,32 @@ import { getSupabase } from '../db/client';
 import { sendTextMessage } from './whatsappClient';
 import { getOptedInGuests } from '../repositories/guests';
 import { logMessage } from '../repositories/messageLogs';
+import type { Broadcast, UserLanguage } from '../types';
 
 interface BroadcastResult {
   total: number;
   sent: number;
   failed: number;
   errors: Array<{ phone: string; error: string }>;
+}
+
+/**
+ * Get the message text for a guest based on their language preference.
+ * Falls back to English if the guest's language is not set or the translation is missing.
+ */
+function getMessageForLanguage(
+  broadcast: Broadcast,
+  language: UserLanguage | null
+): string {
+  switch (language) {
+    case 'HI':
+      return broadcast.message_hi || broadcast.message;
+    case 'PA':
+      return broadcast.message_pa || broadcast.message;
+    case 'EN':
+    default:
+      return broadcast.message;
+  }
 }
 
 export async function sendBroadcast(broadcastId: string): Promise<BroadcastResult> {
@@ -41,13 +61,19 @@ export async function sendBroadcast(broadcastId: string): Promise<BroadcastResul
   // Send to each guest with rate limiting
   for (const guest of guests) {
     try {
+      // Get the message in the guest's preferred language
+      const messageText = getMessageForLanguage(
+        broadcast as Broadcast,
+        guest.user_language as UserLanguage | null
+      );
+
       await sendTextMessage({
         to: guest.phone_number,
-        text: broadcast.message,
+        text: messageText,
       });
 
       // Log the outbound message
-      await logMessage(guest.phone_number, 'outbound', broadcast.message);
+      await logMessage(guest.phone_number, 'outbound', messageText);
 
       // Log success in send_logs
       await supabase.from('send_logs').insert({

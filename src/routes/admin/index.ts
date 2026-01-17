@@ -3,6 +3,10 @@ import { requireAuth } from '../../middleware/auth';
 import statsRouter from './stats';
 import guestsRouter from './guests';
 import broadcastsRouter from './broadcasts';
+import eventsRouter from './events';
+import venuesRouter from './venues';
+import faqsRouter from './faqs';
+import contactsRouter from './contacts';
 
 const router = Router();
 
@@ -13,5 +17,9 @@ router.use(requireAuth);
 router.use('/stats', statsRouter);
 router.use('/guests', guestsRouter);
 router.use('/broadcasts', broadcastsRouter);
+router.use('/events', eventsRouter);
+router.use('/venues', venuesRouter);
+router.use('/faqs', faqsRouter);
+router.use('/contacts', contactsRouter);
 
 export default router;

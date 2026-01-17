@@ -6,6 +6,10 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Guests from './pages/Guests';
 import Broadcasts from './pages/Broadcasts';
+import Events from './pages/Events';
+import Venues from './pages/Venues';
+import FAQs from './pages/FAQs';
+import Contacts from './pages/Contacts';
 import DressCode from './pages/DressCode';
 import './App.css';
 
@@ -34,6 +38,10 @@ function AppRoutes() {
         <Route index element={<Dashboard />} />
         <Route path="guests" element={<Guests />} />
         <Route path="broadcasts" element={<Broadcasts />} />
+        <Route path="events" element={<Events />} />
+        <Route path="venues" element={<Venues />} />
+        <Route path="faqs" element={<FAQs />} />
+        <Route path="contacts" element={<Contacts />} />
       </Route>
     </Routes>
   );

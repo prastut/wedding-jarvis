@@ -28,6 +28,19 @@ export default function Layout() {
           <li>
             <NavLink to="/broadcasts">Broadcasts</NavLink>
           </li>
+          <li className="nav-divider">Content</li>
+          <li>
+            <NavLink to="/events">Events</NavLink>
+          </li>
+          <li>
+            <NavLink to="/venues">Venues</NavLink>
+          </li>
+          <li>
+            <NavLink to="/faqs">FAQs</NavLink>
+          </li>
+          <li>
+            <NavLink to="/contacts">Contacts</NavLink>
+          </li>
         </ul>
 
         <button onClick={handleLogout} className="logout-btn">
