@@ -148,3 +148,73 @@ export async function updateGuestOptIn(phoneNumber: string, optedIn: boolean): P
     throw new Error(`Failed to update guest opt-in: ${error.message}`);
   }
 }
+
+/**
+ * Reset guest's language and side preferences while preserving RSVP data.
+ * Used when guest wants to change their language or side selection.
+ */
+export async function resetGuestPreferences(guestId: string): Promise<Guest> {
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from('guests')
+    .update({
+      user_language: null,
+      user_side: null,
+    })
+    .eq('id', guestId)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to reset guest preferences: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Update guest's RSVP status to 'YES' with guest count
+ */
+export async function updateGuestRsvpYes(guestId: string, guestCount: number): Promise<Guest> {
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from('guests')
+    .update({
+      rsvp_status: 'YES',
+      rsvp_guest_count: guestCount,
+    })
+    .eq('id', guestId)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update guest RSVP: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Update guest's RSVP status to 'NO'
+ */
+export async function updateGuestRsvpNo(guestId: string): Promise<Guest> {
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from('guests')
+    .update({
+      rsvp_status: 'NO',
+      rsvp_guest_count: null,
+    })
+    .eq('id', guestId)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to update guest RSVP: ${error.message}`);
+  }
+
+  return data;
+}
