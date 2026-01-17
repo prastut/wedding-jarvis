@@ -109,6 +109,17 @@ export interface BroadcastFormData {
   message_pa?: string;
 }
 
+export interface BroadcastProgress {
+  type: 'start' | 'progress' | 'complete' | 'error';
+  total?: number;
+  current?: number;
+  sent?: number;
+  failed?: number;
+  guest?: { name: string; phone: string };
+  status?: 'sent' | 'failed';
+  error?: string;
+}
+
 export interface Pagination {
   page: number;
   limit: number;
@@ -280,6 +291,77 @@ export const adminApi = {
       `/api/admin/broadcasts/${id}/send`,
       { method: 'POST' }
     ),
+
+  sendBroadcastStream: async (
+    id: string,
+    options: {
+      includePhones?: string[];
+      excludePhones?: string[];
+      onProgress: (progress: BroadcastProgress) => void;
+      onComplete: () => void;
+      onError: (error: string) => void;
+    }
+  ) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/broadcasts/${id}/send-stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          includePhones: options.includePhones,
+          excludePhones: options.excludePhones,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        options.onError(error.error || 'Request failed');
+        return;
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        options.onError('Streaming not supported');
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              options.onComplete();
+              return;
+            }
+            try {
+              const progress = JSON.parse(data) as BroadcastProgress;
+              if (progress.type === 'error') {
+                options.onError(progress.error || 'Unknown error');
+                return;
+              }
+              options.onProgress(progress);
+            } catch {
+              console.error('Failed to parse:', data);
+            }
+          }
+        }
+      }
+
+      options.onComplete();
+    } catch (err) {
+      options.onError(err instanceof Error ? err.message : 'Connection failed');
+    }
+  },
 
   // Events
   getEvents: () => api<{ events: Event[] }>('/api/admin/events'),

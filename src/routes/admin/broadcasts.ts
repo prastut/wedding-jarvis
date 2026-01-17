@@ -177,7 +177,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/admin/broadcasts/:id/send - Execute broadcast
+// POST /api/admin/broadcasts/:id/send - Execute broadcast (legacy, returns JSON)
 router.post('/:id/send', async (req: Request, res: Response) => {
   try {
     const supabase = getSupabase();
@@ -205,8 +205,11 @@ router.post('/:id/send', async (req: Request, res: Response) => {
     // Update status to pending before starting
     await supabase.from('broadcasts').update({ status: 'pending' }).eq('id', req.params.id);
 
+    // Get include/exclude from request body
+    const { includePhones, excludePhones } = req.body || {};
+
     // Send broadcast (this will update status to sending/completed/failed)
-    const result = await sendBroadcast(req.params.id);
+    const result = await sendBroadcast(req.params.id, { includePhones, excludePhones });
 
     res.json({
       success: true,
@@ -215,6 +218,61 @@ router.post('/:id/send', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Broadcast send error:', error);
     res.status(500).json({ error: 'Failed to send broadcast' });
+  }
+});
+
+// POST /api/admin/broadcasts/:id/send-stream - Execute broadcast with streaming progress
+router.post('/:id/send-stream', async (req: Request, res: Response) => {
+  try {
+    const supabase = getSupabase();
+
+    // Check broadcast exists and is in draft/pending status
+    const { data: broadcast } = await supabase
+      .from('broadcasts')
+      .select('*')
+      .eq('id', req.params.id)
+      .single();
+
+    if (!broadcast) {
+      res.status(404).json({ error: 'Broadcast not found' });
+      return;
+    }
+
+    if (broadcast.status !== 'draft' && broadcast.status !== 'pending') {
+      res.status(400).json({ error: `Cannot send broadcast with status: ${broadcast.status}` });
+      return;
+    }
+
+    // Parse include/exclude from body
+    const { includePhones, excludePhones } = req.body || {};
+
+    // Set up streaming headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    // Import sendBroadcast dynamically
+    const { sendBroadcast } = await import('../../services/broadcaster');
+
+    // Update status to pending before starting
+    await supabase.from('broadcasts').update({ status: 'pending' }).eq('id', req.params.id);
+
+    // Send broadcast with progress callback
+    await sendBroadcast(req.params.id, {
+      includePhones,
+      excludePhones,
+      onProgress: (progress) => {
+        res.write(`data: ${JSON.stringify(progress)}\n\n`);
+      },
+    });
+
+    res.write('data: [DONE]\n\n');
+    res.end();
+  } catch (error) {
+    console.error('Broadcast send-stream error:', error);
+    res.write(`data: ${JSON.stringify({ type: 'error', error: 'Failed to send broadcast' })}\n\n`);
+    res.end();
   }
 });
 

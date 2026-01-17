@@ -12,6 +12,25 @@ interface BroadcastResult {
   errors: Array<{ phone: string; error: string }>;
 }
 
+export interface BroadcastProgress {
+  type: 'start' | 'progress' | 'complete' | 'error';
+  total?: number;
+  current?: number;
+  sent?: number;
+  failed?: number;
+  guest?: { name: string; phone: string };
+  status?: 'sent' | 'failed';
+  error?: string;
+}
+
+export type ProgressCallback = (progress: BroadcastProgress) => void;
+
+export interface SendBroadcastOptions {
+  includePhones?: string[];
+  excludePhones?: string[];
+  onProgress?: ProgressCallback;
+}
+
 /**
  * Get the message text for a guest based on their language preference.
  * Falls back to English if the guest's language is not set or the translation is missing.
@@ -31,7 +50,11 @@ function getMessageForLanguage(
   }
 }
 
-export async function sendBroadcast(broadcastId: string): Promise<BroadcastResult> {
+export async function sendBroadcast(
+  broadcastId: string,
+  options: SendBroadcastOptions = {}
+): Promise<BroadcastResult> {
+  const { includePhones, excludePhones, onProgress } = options;
   const supabase = getSupabase();
 
   // Get the broadcast
@@ -49,7 +72,15 @@ export async function sendBroadcast(broadcastId: string): Promise<BroadcastResul
   await supabase.from('broadcasts').update({ status: 'sending' }).eq('id', broadcastId);
 
   // Get all opted-in guests
-  const guests = await getOptedInGuests();
+  let guests = await getOptedInGuests();
+
+  // Filter guests based on include/exclude lists
+  if (includePhones && includePhones.length > 0) {
+    guests = guests.filter((g) => includePhones.includes(g.phone_number));
+  }
+  if (excludePhones && excludePhones.length > 0) {
+    guests = guests.filter((g) => !excludePhones.includes(g.phone_number));
+  }
 
   const result: BroadcastResult = {
     total: guests.length,
@@ -58,8 +89,12 @@ export async function sendBroadcast(broadcastId: string): Promise<BroadcastResul
     errors: [],
   };
 
+  // Notify start
+  onProgress?.({ type: 'start', total: guests.length });
+
   // Send to each guest with rate limiting
-  for (const guest of guests) {
+  for (let i = 0; i < guests.length; i++) {
+    const guest = guests[i];
     try {
       // Get the message in the guest's preferred language
       const messageText = getMessageForLanguage(
@@ -84,6 +119,17 @@ export async function sendBroadcast(broadcastId: string): Promise<BroadcastResul
 
       result.sent++;
 
+      // Notify progress
+      onProgress?.({
+        type: 'progress',
+        current: i + 1,
+        total: guests.length,
+        sent: result.sent,
+        failed: result.failed,
+        guest: { name: guest.name || 'Unknown', phone: guest.phone_number },
+        status: 'sent',
+      });
+
       // Rate limiting delay
       if (config.broadcast.delayMs > 0) {
         await delay(config.broadcast.delayMs);
@@ -102,6 +148,18 @@ export async function sendBroadcast(broadcastId: string): Promise<BroadcastResul
       result.failed++;
       result.errors.push({ phone: guest.phone_number, error: errorMessage });
 
+      // Notify progress with failure
+      onProgress?.({
+        type: 'progress',
+        current: i + 1,
+        total: guests.length,
+        sent: result.sent,
+        failed: result.failed,
+        guest: { name: guest.name || 'Unknown', phone: guest.phone_number },
+        status: 'failed',
+        error: errorMessage,
+      });
+
       console.error(`Failed to send to ${guest.phone_number}:`, errorMessage);
     }
   }
@@ -116,6 +174,14 @@ export async function sendBroadcast(broadcastId: string): Promise<BroadcastResul
       failed_count: result.failed,
     })
     .eq('id', broadcastId);
+
+  // Notify completion
+  onProgress?.({
+    type: 'complete',
+    total: result.total,
+    sent: result.sent,
+    failed: result.failed,
+  });
 
   return result;
 }

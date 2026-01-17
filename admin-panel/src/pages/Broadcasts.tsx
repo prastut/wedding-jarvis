@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { adminApi } from '../api/client';
-import type { Broadcast, BroadcastFormData, Stats } from '../api/client';
+import type { Broadcast, BroadcastFormData, Stats, BroadcastProgress, Guest } from '../api/client';
 
 type LanguageTab = 'en' | 'hi' | 'pa';
 
@@ -27,10 +27,35 @@ export default function Broadcasts() {
   const [previewBroadcast, setPreviewBroadcast] = useState<Broadcast | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
 
+  // Progress UI state
+  const [showProgress, setShowProgress] = useState(false);
+  const [progressData, setProgressData] = useState<{
+    total: number;
+    current: number;
+    sent: number;
+    failed: number;
+  }>({ total: 0, current: 0, sent: 0, failed: 0 });
+  const [progressLog, setProgressLog] = useState<
+    Array<{ name: string; phone: string; status: 'sent' | 'failed'; error?: string }>
+  >([]);
+  const logEndRef = useRef<HTMLDivElement>(null);
+
+  // Guest selection state
+  const [showGuestSelector, setShowGuestSelector] = useState(false);
+  const [guestSelectorBroadcast, setGuestSelectorBroadcast] = useState<Broadcast | null>(null);
+  const [allGuests, setAllGuests] = useState<Guest[]>([]);
+  const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
+  const [selectionMode, setSelectionMode] = useState<'all' | 'include' | 'exclude'>('all');
+
   useEffect(() => {
     loadBroadcasts();
     loadStats();
   }, []);
+
+  // Auto-scroll log
+  useEffect(() => {
+    logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [progressLog]);
 
   async function loadBroadcasts() {
     try {
@@ -80,42 +105,95 @@ export default function Broadcasts() {
     }
   }
 
-  async function handleSend(broadcast: Broadcast) {
-    const guestCount = await getGuestCount();
-    const langBreakdown = stats
-      ? `English: ${stats.byLanguage.english + stats.byLanguage.notSet}, Hindi: ${stats.byLanguage.hindi}, Punjabi: ${stats.byLanguage.punjabi}`
-      : '';
+  async function openGuestSelector(broadcast: Broadcast) {
+    setGuestSelectorBroadcast(broadcast);
+    setSelectionMode('all');
+    setSelectedPhones(new Set());
 
-    const missingTranslations: string[] = [];
-    if (!broadcast.message_hi && stats && stats.byLanguage.hindi > 0) {
-      missingTranslations.push('Hindi');
-    }
-    if (!broadcast.message_pa && stats && stats.byLanguage.punjabi > 0) {
-      missingTranslations.push('Punjabi');
-    }
-
-    let confirmMsg = `Send this broadcast to ${guestCount} opted-in guests?\n\n${langBreakdown}`;
-    if (missingTranslations.length > 0) {
-      confirmMsg += `\n\nNote: ${missingTranslations.join(' and ')} translation(s) missing - those guests will receive English.`;
-    }
-
-    if (!confirm(confirmMsg)) return;
-
-    setSending(broadcast.id);
+    // Load all opted-in guests
     try {
-      const result = await adminApi.sendBroadcast(broadcast.id);
-      alert(`Broadcast sent! ${result.result.sent} sent, ${result.result.failed} failed`);
-      loadBroadcasts();
+      const data = await adminApi.getGuests({ limit: 1000, opted_in: true });
+      setAllGuests(data.guests);
+      setShowGuestSelector(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send broadcast');
-    } finally {
-      setSending(null);
+      setError(err instanceof Error ? err.message : 'Failed to load guests');
     }
   }
 
-  async function getGuestCount() {
-    const statsData = await adminApi.getStats();
-    return statsData.guests.optedIn;
+  function handleGuestToggle(phone: string) {
+    const newSet = new Set(selectedPhones);
+    if (newSet.has(phone)) {
+      newSet.delete(phone);
+    } else {
+      newSet.add(phone);
+    }
+    setSelectedPhones(newSet);
+  }
+
+  async function handleSendWithSelection() {
+    if (!guestSelectorBroadcast) return;
+
+    const broadcast = guestSelectorBroadcast;
+    setShowGuestSelector(false);
+    setSending(broadcast.id);
+    setShowProgress(true);
+    setProgressData({ total: 0, current: 0, sent: 0, failed: 0 });
+    setProgressLog([]);
+
+    const includePhones =
+      selectionMode === 'include' ? Array.from(selectedPhones) : undefined;
+    const excludePhones =
+      selectionMode === 'exclude' ? Array.from(selectedPhones) : undefined;
+
+    adminApi.sendBroadcastStream(broadcast.id, {
+      includePhones,
+      excludePhones,
+      onProgress: (progress: BroadcastProgress) => {
+        if (progress.type === 'start') {
+          setProgressData((prev) => ({ ...prev, total: progress.total || 0 }));
+        } else if (progress.type === 'progress') {
+          setProgressData({
+            total: progress.total || 0,
+            current: progress.current || 0,
+            sent: progress.sent || 0,
+            failed: progress.failed || 0,
+          });
+          if (progress.guest) {
+            setProgressLog((prev) => [
+              ...prev,
+              {
+                name: progress.guest!.name,
+                phone: progress.guest!.phone,
+                status: progress.status || 'sent',
+                error: progress.error,
+              },
+            ]);
+          }
+        } else if (progress.type === 'complete') {
+          setProgressData({
+            total: progress.total || 0,
+            current: progress.total || 0,
+            sent: progress.sent || 0,
+            failed: progress.failed || 0,
+          });
+        }
+      },
+      onComplete: () => {
+        setSending(null);
+        loadBroadcasts();
+      },
+      onError: (error) => {
+        setError(error);
+        setSending(null);
+        setShowProgress(false);
+      },
+    });
+  }
+
+  function getTargetCount(): number {
+    if (selectionMode === 'all') return allGuests.length;
+    if (selectionMode === 'include') return selectedPhones.size;
+    return allGuests.length - selectedPhones.size;
   }
 
   function startEdit(broadcast: Broadcast) {
@@ -327,7 +405,7 @@ export default function Broadcasts() {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleSend(broadcast)}
+                      onClick={() => openGuestSelector(broadcast)}
                       className="btn-small btn-primary"
                       disabled={sending === broadcast.id}
                     >
@@ -350,6 +428,134 @@ export default function Broadcasts() {
           )}
         </tbody>
       </table>
+
+      {/* Guest Selector Modal */}
+      {showGuestSelector && guestSelectorBroadcast && (
+        <div className="modal-overlay" onClick={() => setShowGuestSelector(false)}>
+          <div className="modal guest-selector-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Send: {guestSelectorBroadcast.topic}</h3>
+
+            <div className="selection-mode">
+              <label>
+                <input
+                  type="radio"
+                  name="mode"
+                  checked={selectionMode === 'all'}
+                  onChange={() => setSelectionMode('all')}
+                />
+                Send to all opted-in guests ({allGuests.length})
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="mode"
+                  checked={selectionMode === 'include'}
+                  onChange={() => setSelectionMode('include')}
+                />
+                Send only to selected guests
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="mode"
+                  checked={selectionMode === 'exclude'}
+                  onChange={() => setSelectionMode('exclude')}
+                />
+                Send to all except selected guests
+              </label>
+            </div>
+
+            {selectionMode !== 'all' && (
+              <div className="guest-list">
+                <div className="guest-list-header">
+                  <span>
+                    {selectedPhones.size} selected
+                    {selectionMode === 'include'
+                      ? ` (will send to ${selectedPhones.size})`
+                      : ` (will send to ${allGuests.length - selectedPhones.size})`}
+                  </span>
+                </div>
+                <div className="guest-list-items">
+                  {allGuests.map((guest) => (
+                    <label key={guest.id} className="guest-item">
+                      <input
+                        type="checkbox"
+                        checked={selectedPhones.has(guest.phone_number)}
+                        onChange={() => handleGuestToggle(guest.phone_number)}
+                      />
+                      <span className="guest-name">{guest.name || 'Unknown'}</span>
+                      <span className="guest-phone">{guest.phone_number}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="modal-actions">
+              <button onClick={() => setShowGuestSelector(false)} className="btn-secondary">
+                Cancel
+              </button>
+              <button
+                onClick={handleSendWithSelection}
+                className="btn-primary"
+                disabled={selectionMode === 'include' && selectedPhones.size === 0}
+              >
+                Send to {getTargetCount()} guests
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Progress Modal */}
+      {showProgress && (
+        <div className="modal-overlay">
+          <div className="modal progress-modal">
+            <h3>Sending Broadcast</h3>
+
+            <div className="progress-bar-container">
+              <div
+                className="progress-bar"
+                style={{
+                  width: progressData.total
+                    ? `${(progressData.current / progressData.total) * 100}%`
+                    : '0%',
+                }}
+              />
+            </div>
+
+            <div className="progress-stats">
+              <span>
+                {progressData.current} / {progressData.total}
+              </span>
+              <span className="sent">✓ {progressData.sent} sent</span>
+              {progressData.failed > 0 && (
+                <span className="failed">✗ {progressData.failed} failed</span>
+              )}
+            </div>
+
+            <div className="progress-log">
+              {progressLog.map((entry, i) => (
+                <div key={i} className={`log-entry ${entry.status}`}>
+                  <span className="log-icon">{entry.status === 'sent' ? '✓' : '✗'}</span>
+                  <span className="log-name">{entry.name}</span>
+                  <span className="log-phone">{entry.phone}</span>
+                  {entry.error && <span className="log-error">{entry.error}</span>}
+                </div>
+              ))}
+              <div ref={logEndRef} />
+            </div>
+
+            {progressData.current === progressData.total && progressData.total > 0 && (
+              <div className="modal-actions">
+                <button onClick={() => setShowProgress(false)} className="btn-primary">
+                  Done
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
