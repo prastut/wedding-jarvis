@@ -92,9 +92,9 @@ _PR-01 and PR-02 can run in parallel after PR-00 is validated._
 | PR-05 | Event Schedule (Side-Filtered)     | A        | ✅ Done | PR-04        |
 | PR-06 | Venue Details                      | A        | ✅ Done | PR-04        |
 | PR-07 | Emergency Contacts (Side-Specific) | A        | ✅ Done | PR-04        |
-| PR-08 | FAQs + Travel + Gifts              | A        | Pending | PR-04        |
+| PR-08 | FAQs + Travel + Gifts              | A        | ✅ Done | PR-04        |
 | PR-09 | RSVP Complete Flow                 | A        | Pending | PR-04        |
-| PR-10 | Reset Flow + Fallback Handler      | A        | Pending | PR-04        |
+| PR-10 | Reset Flow + Fallback Handler      | A        | ✅ Done | PR-04        |
 
 _All 6 PRs in Phase 3 can run in parallel - they only depend on the menu being in place._
 
@@ -587,9 +587,9 @@ curl -X POST http://localhost:3000/test-interactive/list?to=YOUR_PHONE
 | PR-05 | 2026-01-17 | PR-05-event-schedule.md      | Events repository + side-filtered schedule       |
 | PR-06 | 2026-01-17 | PR-06-venue-details.md       | Venue display with translations + maps           |
 | PR-07 | 2026-01-17 | PR-07-emergency-contacts.md  | Contacts repository + side-filtered display      |
-| PR-08 | -          | -                            | Parallel Group A                                 |
+| PR-08 | 2026-01-17 | PR-08-faqs-travel-gifts.md   | FAQs + Travel + Gifts with /gifts page           |
 | PR-09 | -          | -                            | Parallel Group A                                 |
-| PR-10 | -          | -                            | Parallel Group A                                 |
+| PR-10 | 2026-01-17 | PR-10-reset-fallback.md      | Reset flow + improved fallback handling          |
 | PR-11 | -          | -                            | Parallel Group B                                 |
 | PR-12 | -          | -                            | Parallel Group B                                 |
 | PR-13 | -          | -                            | Parallel Group C                                 |

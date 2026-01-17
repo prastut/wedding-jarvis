@@ -133,7 +133,17 @@ export const messages = {
   // ============================================================
   // GIFT REGISTRY
   // ============================================================
-  'gifts.info': '*Gift Registry*\n\nYour presence at our wedding is the greatest gift of all. However, if you wish to bless us, please visit our registry or contact the family.',
+  'gifts.info': '*Gift Registry*\n\nYour presence at our wedding is the greatest gift of all. However, if you wish to bless us, please visit our registry:\n\n{giftsLink}',
+
+  // Gift Registry Page
+  'gifts.page.title': 'Gift Registry',
+  'gifts.page.description': 'Blessing the couple on their new journey',
+  'gifts.page.presenceTitle': 'Your Presence',
+  'gifts.page.presenceText': 'Your presence at our wedding is the greatest gift of all. We are truly honored to have you celebrate this special day with us.',
+  'gifts.page.blessingTitle': 'Blessings & Shagun',
+  'gifts.page.blessingText': 'If you wish to bless us, your love and good wishes mean the world to us. For those who prefer to give shagun, please feel free to do so in person or reach out to the family.',
+  'gifts.page.contactTitle': 'Contact Us',
+  'gifts.page.contactText': 'For any questions about gifts or contributions, please contact the family coordinators listed in the Emergency Contact section of the bot.',
 
   // ============================================================
   // POST-WEDDING

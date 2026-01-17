@@ -8,12 +8,17 @@ import {
   isSideId,
   isMenuId,
   isNavId,
+  isRsvpId,
+  isCountId,
   extractLanguage,
   extractSide,
+  extractCount,
   MENU_IDS,
   LANG_IDS,
   SIDE_IDS,
   NAV_IDS,
+  RSVP_IDS,
+  COUNT_IDS,
 } from '../constants/buttonIds';
 import {
   sendReplyButtons,
@@ -21,7 +26,14 @@ import {
   type ReplyButton,
   type ListSection,
 } from './whatsappClient';
-import { updateGuestLanguage, updateGuestSide, updateGuestOptIn } from '../repositories/guests';
+import {
+  updateGuestLanguage,
+  updateGuestSide,
+  updateGuestOptIn,
+  resetGuestPreferences,
+  updateGuestRsvpYes,
+  updateGuestRsvpNo,
+} from '../repositories/guests';
 import {
   getMessage,
   getMessageWithValues,
@@ -180,6 +192,16 @@ async function handleOnboardedState(
     return null;
   }
 
+  // Handle RSVP flow buttons
+  if (buttonId && isRsvpId(buttonId)) {
+    return await handleRsvpButton(guest, buttonId);
+  }
+
+  // Handle count selection (from RSVP flow)
+  if (buttonId && isCountId(buttonId)) {
+    return await handleCountSelection(guest, buttonId);
+  }
+
   // Handle text commands (legacy support)
   if (textInput === 'MENU' || textInput === '0' || textInput === 'HI' || textInput === 'HELLO') {
     await showMainMenu(guest.phone_number, language);
@@ -202,9 +224,10 @@ async function handleOnboardedState(
       return null;
   }
 
-  // Unknown input - show fallback menu
-  await showMainMenu(guest.phone_number, language);
-  return getMessage('fallback.unknown', language);
+  // Unknown input - show fallback menu with "please select" message
+  const fallbackMessage = getMessage('fallback.unknown', language);
+  await showMainMenu(guest.phone_number, language, fallbackMessage);
+  return null;
 }
 
 /**
@@ -224,17 +247,11 @@ async function handleMenuSelection(guest: Guest, menuId: string): Promise<string
       return null;
 
     case MENU_IDS.TRAVEL:
-      // TODO PR-08: Travel info
       await sendContentWithBackButton(guest.phone_number, getMessage('travel.info', language), language);
       return null;
 
     case MENU_IDS.RSVP:
-      // TODO PR-09: Full RSVP flow
-      await sendContentWithBackButton(
-        guest.phone_number,
-        getMessageWithValues('stub.comingSoon', language, { feature: 'RSVP' }),
-        language
-      );
+      await handleRsvp(guest);
       return null;
 
     case MENU_IDS.EMERGENCY:
@@ -246,17 +263,11 @@ async function handleMenuSelection(guest: Guest, menuId: string): Promise<string
       return null;
 
     case MENU_IDS.GIFTS:
-      // TODO PR-08: Gift registry
-      await sendContentWithBackButton(guest.phone_number, getMessage('gifts.info', language), language);
+      await sendGiftRegistry(guest);
       return null;
 
     case MENU_IDS.RESET:
-      // TODO PR-10: Reset flow
-      await sendContentWithBackButton(
-        guest.phone_number,
-        getMessageWithValues('stub.comingSoon', language, { feature: 'Reset' }),
-        language
-      );
+      await handleReset(guest);
       return null;
 
     default:
@@ -379,6 +390,219 @@ async function sendContentWithBackButton(
     console.log(`[INTERACTIVE] Sent content with back button to ${phoneNumber}`);
   } catch (error) {
     console.error(`[INTERACTIVE] Failed to send content with back button:`, error);
+    throw error;
+  }
+}
+
+// ============================================================
+// RESET FLOW
+// ============================================================
+
+/**
+ * Handle reset: clear language/side preferences while preserving RSVP data
+ * Then show language selection to restart onboarding
+ */
+async function handleReset(guest: Guest): Promise<void> {
+  const language = guest.user_language || 'EN';
+  const confirmMessage = getMessage('reset.confirm', language);
+
+  console.log(`[RESET] ${guest.phone_number} resetting preferences`);
+
+  // Reset language and side in database (RSVP preserved)
+  await resetGuestPreferences(guest.id);
+
+  // Send confirmation message followed by language selection
+  // We send the confirmation as part of the language selection body
+  const welcomeTitle = getMessage('welcome.title', 'EN');
+  const selectLanguage = getMessage('welcome.selectLanguage', 'EN');
+  const body = `${confirmMessage}\n\n${welcomeTitle}\n\n${selectLanguage}`;
+
+  const buttons: ReplyButton[] = [
+    { id: LANG_IDS.ENGLISH, title: 'English' },
+    { id: LANG_IDS.HINDI, title: 'हिंदी' },
+    { id: LANG_IDS.PUNJABI, title: 'ਪੰਜਾਬੀ' },
+  ];
+
+  try {
+    await sendReplyButtons(guest.phone_number, body, buttons);
+    console.log(`[RESET] Sent language selection after reset to ${guest.phone_number}`);
+  } catch (error) {
+    console.error(`[RESET] Failed to send language selection after reset:`, error);
+    throw error;
+  }
+}
+
+// ============================================================
+// RSVP FLOW
+// ============================================================
+
+/**
+ * Handle RSVP menu selection
+ * Shows different prompts based on whether guest has already RSVP'd
+ */
+async function handleRsvp(guest: Guest): Promise<void> {
+  const language = guest.user_language || 'EN';
+
+  if (guest.rsvp_status === null) {
+    // First-time RSVP: show Yes/No buttons
+    await showRsvpPrompt(guest.phone_number, language);
+  } else {
+    // Returning guest: show current status with Update button
+    await showRsvpStatus(guest);
+  }
+}
+
+/**
+ * Handle RSVP button presses (rsvp_yes, rsvp_no, rsvp_update, rsvp_back)
+ */
+async function handleRsvpButton(guest: Guest, buttonId: string): Promise<string | null> {
+  const language = guest.user_language || 'EN';
+
+  switch (buttonId) {
+    case RSVP_IDS.YES:
+      // User wants to attend - show count list
+      await showGuestCountList(guest.phone_number, language);
+      return null;
+
+    case RSVP_IDS.NO:
+      // User cannot attend - save status and show confirmation
+      await updateGuestRsvpNo(guest.id);
+      console.log(`[RSVP] ${guest.phone_number} declined attendance`);
+      await sendContentWithBackButton(
+        guest.phone_number,
+        getMessage('rsvp.thankYou.no', language),
+        language
+      );
+      return null;
+
+    case RSVP_IDS.UPDATE:
+      // User wants to update their RSVP - show count list
+      await showGuestCountList(guest.phone_number, language);
+      return null;
+
+    case RSVP_IDS.BACK:
+      // User wants to go back to menu
+      await showMainMenu(guest.phone_number, language);
+      return null;
+
+    default:
+      // Unknown RSVP button - show menu
+      await showMainMenu(guest.phone_number, language);
+      return null;
+  }
+}
+
+/**
+ * Handle count selection from the guest count list
+ */
+async function handleCountSelection(guest: Guest, buttonId: string): Promise<string | null> {
+  const language = guest.user_language || 'EN';
+  const count = extractCount(buttonId);
+
+  if (count === null) {
+    // Invalid count - show menu
+    await showMainMenu(guest.phone_number, language);
+    return null;
+  }
+
+  // Save RSVP with guest count
+  await updateGuestRsvpYes(guest.id, count);
+  console.log(`[RSVP] ${guest.phone_number} confirmed attendance with ${count} guests`);
+
+  // Show appropriate thank you message
+  let thankYouMessage: string;
+  if (count === 10) {
+    // 10+ guests - special message about follow-up
+    thankYouMessage = getMessage('rsvp.thankYou.10plus', language);
+  } else {
+    thankYouMessage = getMessage('rsvp.thankYou.yes', language);
+  }
+
+  await sendContentWithBackButton(guest.phone_number, thankYouMessage, language);
+  return null;
+}
+
+/**
+ * Show RSVP Yes/No prompt for first-time guests
+ */
+async function showRsvpPrompt(phoneNumber: string, language: UserLanguage): Promise<void> {
+  const body = getMessage('rsvp.prompt', language);
+
+  const buttons: ReplyButton[] = [
+    { id: RSVP_IDS.YES, title: getMessage('rsvp.button.yes', language) },
+    { id: RSVP_IDS.NO, title: getMessage('rsvp.button.no', language) },
+  ];
+
+  try {
+    await sendReplyButtons(phoneNumber, body, buttons);
+    console.log(`[RSVP] Sent RSVP prompt to ${phoneNumber}`);
+  } catch (error) {
+    console.error(`[RSVP] Failed to send RSVP prompt:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Show current RSVP status for returning guests with Update button
+ */
+async function showRsvpStatus(guest: Guest): Promise<void> {
+  const language = guest.user_language || 'EN';
+
+  let statusMessage: string;
+  if (guest.rsvp_status === 'YES') {
+    const count = guest.rsvp_guest_count === 10 ? '10+' : String(guest.rsvp_guest_count || 1);
+    statusMessage = getMessageWithValues('rsvp.confirmed.yes', language, { count });
+  } else {
+    statusMessage = getMessage('rsvp.confirmed.no', language);
+  }
+
+  const buttons: ReplyButton[] = [
+    { id: RSVP_IDS.UPDATE, title: getMessage('rsvp.button.update', language) },
+    { id: RSVP_IDS.BACK, title: getMessage('rsvp.button.back', language) },
+  ];
+
+  try {
+    await sendReplyButtons(guest.phone_number, statusMessage, buttons);
+    console.log(`[RSVP] Sent RSVP status to ${guest.phone_number}`);
+  } catch (error) {
+    console.error(`[RSVP] Failed to send RSVP status:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Show guest count list (1-10+) for RSVP
+ */
+async function showGuestCountList(phoneNumber: string, language: UserLanguage): Promise<void> {
+  const body = getMessage('rsvp.countPrompt', language);
+  const buttonText = getMessage('rsvp.countButton', language);
+
+  // Build rows for 1-9 and 10+
+  const rows = [
+    { id: COUNT_IDS.COUNT_1, title: '1', description: '' },
+    { id: COUNT_IDS.COUNT_2, title: '2', description: '' },
+    { id: COUNT_IDS.COUNT_3, title: '3', description: '' },
+    { id: COUNT_IDS.COUNT_4, title: '4', description: '' },
+    { id: COUNT_IDS.COUNT_5, title: '5', description: '' },
+    { id: COUNT_IDS.COUNT_6, title: '6', description: '' },
+    { id: COUNT_IDS.COUNT_7, title: '7', description: '' },
+    { id: COUNT_IDS.COUNT_8, title: '8', description: '' },
+    { id: COUNT_IDS.COUNT_9, title: '9', description: '' },
+    { id: COUNT_IDS.COUNT_10_PLUS, title: getMessage('rsvp.count.10plus', language), description: '' },
+  ];
+
+  const sections: ListSection[] = [
+    {
+      title: 'Guests',
+      rows,
+    },
+  ];
+
+  try {
+    await sendListMessage(phoneNumber, body, buttonText, sections);
+    console.log(`[RSVP] Sent guest count list to ${phoneNumber}`);
+  } catch (error) {
+    console.error(`[RSVP] Failed to send guest count list:`, error);
     throw error;
   }
 }
@@ -605,4 +829,26 @@ function formatContactsContent(contacts: CoordinatorContact[], language: UserLan
     .join('\n\n');
 
   return `${header}\n\n${contactList}`;
+}
+
+/**
+ * Get the gifts page URL based on language
+ */
+function getGiftsPageUrl(language: UserLanguage): string {
+  const baseUrl = process.env.PUBLIC_URL || 'https://wedding-jarvis.railway.app';
+  switch (language) {
+    case 'HI':
+      return `${baseUrl}/gifts/hi`;
+    case 'PA':
+      return `${baseUrl}/gifts/pa`;
+    default:
+      return `${baseUrl}/gifts`;
+  }
+}
+
+async function sendGiftRegistry(guest: Guest): Promise<void> {
+  const language = guest.user_language || 'EN';
+  const giftsLink = getGiftsPageUrl(language);
+  const content = getMessageWithValues('gifts.info', language, { giftsLink });
+  await sendContentWithBackButton(guest.phone_number, content, language);
 }
