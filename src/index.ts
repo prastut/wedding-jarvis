@@ -6,7 +6,7 @@ import path from 'path';
 import { config, validateConfig } from './config';
 import webhookRouter from './routes/webhook';
 import authRouter from './routes/auth';
-import adminRouter from './routes/admin';
+import adminRouter from './routes/admin/index';
 
 // Rate limiters
 const authLimiter = rateLimit({

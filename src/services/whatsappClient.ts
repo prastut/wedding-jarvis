@@ -1,5 +1,5 @@
-import { config } from '../../config';
-import type { WhatsAppSendResponse } from '../../types';
+import { config } from '../config';
+import type { WhatsAppSendResponse } from '../types';
 
 const WHATSAPP_API_URL = 'https://graph.facebook.com/v18.0';
 

@@ -1,148 +1,12 @@
 import { Router, Request, Response } from 'express';
-import { getSupabase } from '../db/client';
-import { requireAuth } from '../middleware/auth';
-import { getAllGuests } from '../repositories/guests';
-import type { Broadcast } from '../types';
+import { getSupabase } from '../../db/client';
+import type { Broadcast } from '../../types';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
-// All admin routes require authentication
-router.use(requireAuth);
-
-// GET /api/admin/stats - Dashboard statistics
-router.get('/stats', async (_req: Request, res: Response) => {
-  try {
-    const supabase = getSupabase();
-
-    // Get guest counts
-    const { count: totalGuests } = await supabase
-      .from('guests')
-      .select('*', { count: 'exact', head: true });
-
-    const { count: optedInGuests } = await supabase
-      .from('guests')
-      .select('*', { count: 'exact', head: true })
-      .eq('opted_in', true);
-
-    // Get message counts
-    const { count: totalMessages } = await supabase
-      .from('message_logs')
-      .select('*', { count: 'exact', head: true });
-
-    const { count: inboundMessages } = await supabase
-      .from('message_logs')
-      .select('*', { count: 'exact', head: true })
-      .eq('direction', 'inbound');
-
-    // Get last activity
-    const { data: lastMessage } = await supabase
-      .from('message_logs')
-      .select('created_at')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    // Get broadcast counts
-    const { count: totalBroadcasts } = await supabase
-      .from('broadcasts')
-      .select('*', { count: 'exact', head: true });
-
-    const { count: completedBroadcasts } = await supabase
-      .from('broadcasts')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'completed');
-
-    res.json({
-      guests: {
-        total: totalGuests || 0,
-        optedIn: optedInGuests || 0,
-        optedOut: (totalGuests || 0) - (optedInGuests || 0),
-      },
-      messages: {
-        total: totalMessages || 0,
-        inbound: inboundMessages || 0,
-        outbound: (totalMessages || 0) - (inboundMessages || 0),
-      },
-      broadcasts: {
-        total: totalBroadcasts || 0,
-        completed: completedBroadcasts || 0,
-      },
-      lastActivity: lastMessage?.created_at || null,
-    });
-  } catch (error) {
-    console.error('Stats error:', error);
-    res.status(500).json({ error: 'Failed to fetch stats' });
-  }
-});
-
-// GET /api/admin/guests - List guests with pagination and filters
-router.get('/guests', async (req: Request, res: Response) => {
-  try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 50;
-    const search = req.query.search as string | undefined;
-    const optedIn = req.query.opted_in === 'true' ? true :
-                    req.query.opted_in === 'false' ? false : undefined;
-
-    const offset = (page - 1) * limit;
-
-    const { guests, total } = await getAllGuests({
-      limit,
-      offset,
-      search,
-      optedIn,
-    });
-
-    res.json({
-      guests,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    });
-  } catch (error) {
-    console.error('Guest list error:', error);
-    res.status(500).json({ error: 'Failed to fetch guests' });
-  }
-});
-
-// GET /api/admin/guests/export - Export guests as CSV
-router.get('/guests/export', async (req: Request, res: Response) => {
-  try {
-    const optedIn = req.query.opted_in === 'true' ? true :
-                    req.query.opted_in === 'false' ? false : undefined;
-
-    const { guests } = await getAllGuests({ limit: 10000, optedIn });
-
-    // Build CSV
-    const headers = ['phone_number', 'name', 'opted_in', 'first_seen_at', 'last_inbound_at'];
-    const rows = guests.map(g => [
-      g.phone_number,
-      g.name || '',
-      g.opted_in ? 'Yes' : 'No',
-      g.first_seen_at,
-      g.last_inbound_at || '',
-    ]);
-
-    const csv = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
-    ].join('\n');
-
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', 'attachment; filename="guests.csv"');
-    res.send(csv);
-  } catch (error) {
-    console.error('Export error:', error);
-    res.status(500).json({ error: 'Failed to export guests' });
-  }
-});
-
 // GET /api/admin/broadcasts - List broadcasts
-router.get('/broadcasts', async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response) => {
   try {
     const supabase = getSupabase();
     const page = parseInt(req.query.page as string) || 1;
@@ -173,7 +37,7 @@ router.get('/broadcasts', async (req: Request, res: Response) => {
 });
 
 // GET /api/admin/broadcasts/:id - Get single broadcast
-router.get('/broadcasts/:id', async (req: Request, res: Response) => {
+router.get('/:id', async (req: Request, res: Response) => {
   try {
     const supabase = getSupabase();
     const { data: broadcast, error } = await supabase
@@ -195,7 +59,7 @@ router.get('/broadcasts/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/admin/broadcasts - Create broadcast
-router.post('/broadcasts', async (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   try {
     const { topic, message, template_name } = req.body;
 
@@ -229,7 +93,7 @@ router.post('/broadcasts', async (req: Request, res: Response) => {
 });
 
 // PATCH /api/admin/broadcasts/:id - Update broadcast
-router.patch('/broadcasts/:id', async (req: Request, res: Response) => {
+router.patch('/:id', async (req: Request, res: Response) => {
   try {
     const supabase = getSupabase();
     const { topic, message, template_name } = req.body;
@@ -273,7 +137,7 @@ router.patch('/broadcasts/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/admin/broadcasts/:id - Delete broadcast
-router.delete('/broadcasts/:id', async (req: Request, res: Response) => {
+router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const supabase = getSupabase();
 
@@ -309,7 +173,7 @@ router.delete('/broadcasts/:id', async (req: Request, res: Response) => {
 });
 
 // POST /api/admin/broadcasts/:id/send - Execute broadcast
-router.post('/broadcasts/:id/send', async (req: Request, res: Response) => {
+router.post('/:id/send', async (req: Request, res: Response) => {
   try {
     const supabase = getSupabase();
 
@@ -331,7 +195,7 @@ router.post('/broadcasts/:id/send', async (req: Request, res: Response) => {
     }
 
     // Import sendBroadcast dynamically to avoid circular deps
-    const { sendBroadcast } = await import('../services/broadcast/broadcaster');
+    const { sendBroadcast } = await import('../../services/broadcaster');
 
     // Update status to pending before starting
     await supabase

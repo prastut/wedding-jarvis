@@ -1,9 +1,9 @@
-import { config } from '../../config';
-import { getSupabase } from '../../db/client';
-import { sendTextMessage } from '../whatsapp/client';
-import { getOptedInGuests } from '../../repositories/guests';
-import { logMessage } from '../../repositories/message-logs';
-import type { Broadcast, Guest } from '../../types';
+import { config } from '../config';
+import { getSupabase } from '../db/client';
+import { sendTextMessage } from './whatsappClient';
+import { getOptedInGuests } from '../repositories/guests';
+import { logMessage } from '../repositories/messageLogs';
+import type { Broadcast, Guest } from '../types';
 
 interface BroadcastResult {
   total: number;

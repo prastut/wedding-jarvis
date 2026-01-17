@@ -1,13 +1,14 @@
 # Wedding Jarvis - Implementation Plan
 
 ## Tech Stack
+
 - **Backend**: Node.js/TypeScript + Express
 - **Database**: Supabase (hosted PostgreSQL)
 - **Hosting**: Railway
 - **Frontend**: React + Vite (admin panel)
 - **WhatsApp**: Meta Cloud API
 
-> **Manual Setup**: See [WHATSAPP_SETUP.md](./WHATSAPP_SETUP.md) for Meta Business / WhatsApp API configuration steps.
+> **Manual Setup**: See [WHATSAPP_SETUP.md](WHATSAPP_SETUP.md) for Meta Business / WhatsApp API configuration steps.
 
 ---
 
@@ -44,6 +45,7 @@ wedding-jarvis/
 ## Database Schema (Supabase)
 
 ### Core Tables
+
 1. **guests** - phone_number, name, opted_in, first_seen_at, last_inbound_at, tags
 2. **events** - name, description, start_time, venue_id, dress_code, sort_order
 3. **venues** - name, address, google_maps_link, parking_info
@@ -60,10 +62,12 @@ wedding-jarvis/
 ## API Endpoints
 
 ### WhatsApp Webhook
+
 - `GET /webhook` - Meta verification challenge
 - `POST /webhook` - Receive inbound messages
 
 ### Admin API
+
 - `POST /api/auth/login` | `POST /api/auth/logout` | `GET /api/auth/me`
 - `GET /api/admin/stats` - Dashboard data
 - `GET /api/admin/guests` - List guests (paginated, filterable)
@@ -97,6 +101,7 @@ Special commands:
 ## Implementation Phases
 
 ### Phase 1: Foundation
+
 - [ ] Initialize Node.js/TypeScript project with Express
 - [ ] Create Supabase project and run migrations (guests table only for now)
 - [ ] Set up project structure, ESLint, Prettier
@@ -104,21 +109,25 @@ Special commands:
 - [ ] Deploy to Railway (get public URL)
 
 ### Phase 2: Minimal WhatsApp Integration
+
 - [ ] Implement `GET /webhook` (verification challenge)
 - [ ] Implement `POST /webhook` (receive messages, log to console)
 - [ ] Create WhatsApp API client (send text message function)
 - [ ] Configure webhook in Meta (see WHATSAPP_SETUP.md Phase F)
 
 ### Phase 3: Loop Test (Validate Core Flow)
+
 **Goal**: Prove the end-to-end flow works before building everything else.
 
 #### Test A: Inbound → Response
+
 - [ ] Send "Hi" to bot from test phone
 - [ ] Webhook receives message (check logs)
 - [ ] Bot responds with simple menu text
 - [ ] Verify message received on phone
 
 #### Test B: Outbound Broadcast
+
 - [ ] Manually insert a test guest in Supabase (your phone number, opted_in=true)
 - [ ] Create simple `/api/test/broadcast` endpoint that:
   - Fetches all opted_in guests
@@ -131,6 +140,7 @@ Special commands:
 ---
 
 ### Phase 4: Full Bot Logic
+
 - [ ] Implement main menu display with all options
 - [ ] Implement menu option handlers:
   - [ ] 1 - Event schedule (fetch from DB)
@@ -143,6 +153,7 @@ Special commands:
 - [ ] Handle invalid inputs gracefully (show menu again)
 
 ### Phase 5: Admin Backend
+
 - [ ] Session-based authentication (express-session)
 - [ ] Login/logout endpoints
 - [ ] Dashboard stats endpoint (guest counts, last activity)
@@ -155,6 +166,7 @@ Special commands:
   - [ ] Progress tracking (sent/failed counts)
 
 ### Phase 6: Admin Frontend (React)
+
 - [ ] Login page
 - [ ] Dashboard with stats cards
 - [ ] Guests page with table, filters, search
@@ -167,6 +179,7 @@ Special commands:
 - [ ] Optional: Content editor for events/venues/FAQs
 
 ### Phase 7: Production Hardening
+
 - [ ] Webhook signature validation (security)
 - [ ] Rate limiting on all endpoints
 - [ ] Error handling and graceful degradation
@@ -175,6 +188,7 @@ Special commands:
 - [ ] Get message templates approved
 
 ### Phase 8: Go-Live
+
 - [ ] Add real wedding content (events, venues, FAQs, contacts)
 - [ ] End-to-end testing of all flows
 - [ ] Test broadcast to small group
@@ -185,14 +199,14 @@ Special commands:
 
 ## Critical Files
 
-| File | Purpose |
-|------|---------|
-| `src/routes/webhook.ts` | WhatsApp webhook handlers |
-| `src/services/whatsapp/client.ts` | WhatsApp API client (send messages) |
-| `src/services/bot/menu-router.ts` | Menu navigation and response logic |
-| `src/services/broadcast/broadcaster.ts` | Broadcast engine with rate limiting |
-| `src/db/migrations/001_initial_schema.sql` | Database schema |
-| `admin-panel/src/pages/Broadcast.tsx` | Admin broadcast UI |
+| File                                       | Purpose                             |
+| ------------------------------------------ | ----------------------------------- |
+| `src/routes/webhook.ts`                    | WhatsApp webhook handlers           |
+| `src/services/whatsapp/client.ts`          | WhatsApp API client (send messages) |
+| `src/services/bot/menu-router.ts`          | Menu navigation and response logic  |
+| `src/services/broadcast/broadcaster.ts`    | Broadcast engine with rate limiting |
+| `src/db/migrations/001_initial_schema.sql` | Database schema                     |
+| `admin-panel/src/pages/Broadcast.tsx`      | Admin broadcast UI                  |
 
 ---
 
@@ -227,10 +241,10 @@ BROADCAST_DELAY_MS=100
 
 ## Key Design Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Auth approach | Session-based | Simpler than JWT for admin panel |
-| Admin panel | Same repo, React SPA | Shared types, single deployment |
-| Broadcast safety | Idempotency key + confirmation | Prevent accidental double-sends |
-| Error philosophy | Never crash, always respond | Wedding day reliability |
-| Message logging | Log everything | Debugging and audit trail |
+| Decision         | Choice                         | Rationale                        |
+| ---------------- | ------------------------------ | -------------------------------- |
+| Auth approach    | Session-based                  | Simpler than JWT for admin panel |
+| Admin panel      | Same repo, React SPA           | Shared types, single deployment  |
+| Broadcast safety | Idempotency key + confirmation | Prevent accidental double-sends  |
+| Error philosophy | Never crash, always respond    | Wedding day reliability          |
+| Message logging  | Log everything                 | Debugging and audit trail        |

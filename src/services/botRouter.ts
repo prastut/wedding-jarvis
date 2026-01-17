@@ -1,5 +1,5 @@
-import { getSupabase } from '../../db/client';
-import type { Event, Venue, FAQ, CoordinatorContact } from '../../types';
+import { getSupabase } from '../db/client';
+import type { Event, Venue, FAQ, CoordinatorContact } from '../types';
 
 // Simple in-memory cache (5 minute TTL)
 const cache: Map<string, { data: string; expires: number }> = new Map();
