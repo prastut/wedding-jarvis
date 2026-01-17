@@ -835,7 +835,7 @@ function formatContactsContent(contacts: CoordinatorContact[], language: UserLan
  * Get the gifts page URL based on language
  */
 function getGiftsPageUrl(language: UserLanguage): string {
-  const baseUrl = process.env.PUBLIC_URL || 'https://wedding-jarvis.railway.app';
+  const baseUrl = process.env.PUBLIC_URL || 'https://wedding-jarvis-production.up.railway.app';
   switch (language) {
     case 'HI':
       return `${baseUrl}/gifts/hi`;
