@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Guests from './pages/Guests';
 import Broadcasts from './pages/Broadcasts';
+import Activity from './pages/Activity';
 import Events from './pages/Events';
 import Venues from './pages/Venues';
 import FAQs from './pages/FAQs';
@@ -36,6 +37,7 @@ function AppRoutes() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="activity" element={<Activity />} />
         <Route path="guests" element={<Guests />} />
         <Route path="broadcasts" element={<Broadcasts />} />
         <Route path="events" element={<Events />} />

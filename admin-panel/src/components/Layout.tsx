@@ -23,6 +23,9 @@ export default function Layout() {
             <NavLink to="/" end>Dashboard</NavLink>
           </li>
           <li>
+            <NavLink to="/activity">Live Activity</NavLink>
+          </li>
+          <li>
             <NavLink to="/guests">Guests</NavLink>
           </li>
           <li>

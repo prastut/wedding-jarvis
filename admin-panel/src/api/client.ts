@@ -241,6 +241,35 @@ export interface ContactFormData {
   is_primary?: boolean;
 }
 
+// Message types
+export interface MessageLog {
+  id: string;
+  phone_number: string;
+  direction: 'inbound' | 'outbound';
+  message_text: string;
+  raw_payload: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface MessageWithGuest extends MessageLog {
+  guest: {
+    id: string;
+    name: string | null;
+    user_language: UserLanguage | null;
+    user_side: UserSide | null;
+  } | null;
+}
+
+export interface ChatHistoryResponse {
+  guest: Guest | null;
+  messages: MessageLog[];
+  pagination: {
+    limit: number;
+    offset: number;
+    total: number;
+  };
+}
+
 export const adminApi = {
   getStats: () => api<Stats>('/api/admin/stats'),
 
@@ -417,4 +446,24 @@ export const adminApi = {
 
   deleteContact: (id: string) =>
     api<{ success: boolean }>(`/api/admin/contacts/${id}`, { method: 'DELETE' }),
+
+  // Messages
+  getRecentMessages: (params: { direction?: 'inbound' | 'outbound'; since?: string; limit?: number } = {}) => {
+    const searchParams = new URLSearchParams();
+    if (params.direction) searchParams.set('direction', params.direction);
+    if (params.since) searchParams.set('since', params.since);
+    if (params.limit) searchParams.set('limit', String(params.limit));
+    const query = searchParams.toString();
+    return api<{ messages: MessageWithGuest[]; total: number }>(
+      `/api/admin/messages/recent${query ? `?${query}` : ''}`
+    );
+  },
+
+  getChatHistory: (phone: string, params: { limit?: number; offset?: number } = {}) => {
+    const searchParams = new URLSearchParams();
+    if (params.limit) searchParams.set('limit', String(params.limit));
+    if (params.offset) searchParams.set('offset', String(params.offset));
+    const query = searchParams.toString();
+    return api<ChatHistoryResponse>(`/api/admin/messages/${encodeURIComponent(phone)}${query ? `?${query}` : ''}`);
+  },
 };

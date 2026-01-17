@@ -1,6 +1,22 @@
 import { getSupabase } from '../db/client';
 import type { Guest, UserLanguage, UserSide } from '../types';
 
+export async function findGuestByPhone(phoneNumber: string): Promise<Guest | null> {
+  const supabase = getSupabase();
+
+  const { data, error } = await supabase
+    .from('guests')
+    .select('*')
+    .eq('phone_number', phoneNumber)
+    .single();
+
+  if (error && error.code !== 'PGRST116') {
+    throw new Error(`Failed to find guest: ${error.message}`);
+  }
+
+  return data || null;
+}
+
 export async function findOrCreateGuest(phoneNumber: string, name?: string): Promise<Guest> {
   const supabase = getSupabase();
 
