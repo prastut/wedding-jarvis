@@ -186,15 +186,17 @@ async function handleOnboardedState(
   // Numeric menu commands for legacy support
   switch (textInput) {
     case '1':
-      return await getEventSchedule(guest);
+      await sendEventSchedule(guest);
+      return null;
     case '2':
-      return await getVenuesAndDirections(guest);
+      await sendVenuesAndDirections(guest);
+      return null;
     case '3':
-      return await getDressCodes(guest);
+      await sendFAQs(guest);
+      return null;
     case '4':
-      return await getFAQs(guest);
-    case '5':
-      return await getCoordinatorContact(guest);
+      await sendCoordinatorContact(guest);
+      return null;
   }
 
   // Unknown input - show fallback menu
@@ -204,39 +206,66 @@ async function handleOnboardedState(
 
 /**
  * Handle menu item selections
+ * All handlers send interactive messages directly and return null
  */
 async function handleMenuSelection(guest: Guest, menuId: string): Promise<string | null> {
+  const language = guest.user_language!;
+
   switch (menuId) {
     case MENU_IDS.SCHEDULE:
-      return await getEventSchedule(guest);
+      await sendEventSchedule(guest);
+      return null;
 
     case MENU_IDS.VENUE:
-      return await getVenuesAndDirections(guest);
+      await sendVenuesAndDirections(guest);
+      return null;
 
     case MENU_IDS.TRAVEL:
       // TODO PR-08: Travel info
-      return getStubResponse('Travel & Stay', guest.user_language!);
+      await sendContentWithBackButton(
+        guest.phone_number,
+        getStubContent('Travel & Stay', language),
+        language
+      );
+      return null;
 
     case MENU_IDS.RSVP:
       // TODO PR-09: Full RSVP flow
-      return getStubResponse('RSVP', guest.user_language!);
+      await sendContentWithBackButton(
+        guest.phone_number,
+        getStubContent('RSVP', language),
+        language
+      );
+      return null;
 
     case MENU_IDS.EMERGENCY:
-      return await getCoordinatorContact(guest);
+      await sendCoordinatorContact(guest);
+      return null;
 
     case MENU_IDS.FAQ:
-      return await getFAQs(guest);
+      await sendFAQs(guest);
+      return null;
 
     case MENU_IDS.GIFTS:
       // TODO PR-08: Gift registry
-      return getStubResponse('Gift Registry', guest.user_language!);
+      await sendContentWithBackButton(
+        guest.phone_number,
+        getStubContent('Gift Registry', language),
+        language
+      );
+      return null;
 
     case MENU_IDS.RESET:
       // TODO PR-10: Reset flow
-      return getStubResponse('Reset', guest.user_language!);
+      await sendContentWithBackButton(
+        guest.phone_number,
+        getStubContent('Reset', language),
+        language
+      );
+      return null;
 
     default:
-      await showMainMenu(guest.phone_number, guest.user_language!);
+      await showMainMenu(guest.phone_number, language);
       return null;
   }
 }
@@ -478,38 +507,63 @@ function getFallbackMessage(language: UserLanguage): string {
 }
 
 /**
- * Get back to menu message
+ * Get "Back to Menu" button label in user's language
  */
-function getBackToMenuMessage(language: UserLanguage): string {
-  const messages: Record<UserLanguage, string> = {
-    EN: '\n\nReply 0 or tap "View Options" for menu.',
-    HI: '\n\nमेनू के लिए 0 दबाएं या "विकल्प देखें" पर टैप करें।',
-    PA: '\n\nਮੇਨੂ ਲਈ 0 ਦਬਾਓ ਜਾਂ "ਵਿਕਲਪ ਦੇਖੋ" ਤੇ ਟੈਪ ਕਰੋ।',
+function getBackToMenuLabel(language: UserLanguage): string {
+  const labels: Record<UserLanguage, string> = {
+    EN: 'Back to Menu',
+    HI: 'मेनू पर वापस',
+    PA: 'ਮੇਨੂ ਤੇ ਵਾਪਸ',
   };
-  return messages[language];
+  return labels[language];
 }
 
 /**
- * Get stub response for features not yet implemented
+ * Send content with a "Back to Menu" button
  */
-function getStubResponse(feature: string, language: UserLanguage): string {
+async function sendContentWithBackButton(
+  phoneNumber: string,
+  content: string,
+  language: UserLanguage
+): Promise<void> {
+  const buttons: ReplyButton[] = [
+    { id: NAV_IDS.BACK_TO_MENU, title: getBackToMenuLabel(language) },
+  ];
+
+  try {
+    await sendReplyButtons(phoneNumber, content, buttons);
+    console.log(`[INTERACTIVE] Sent content with back button to ${phoneNumber}`);
+  } catch (error) {
+    console.error(`[INTERACTIVE] Failed to send content with back button:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Get stub content for features not yet implemented
+ */
+function getStubContent(feature: string, language: UserLanguage): string {
   const messages: Record<UserLanguage, string> = {
     EN: `${feature} feature coming soon!`,
     HI: `${feature} सुविधा जल्द आ रही है!`,
     PA: `${feature} ਸੁਵਿਧਾ ਜਲਦੀ ਆ ਰਹੀ ਹੈ!`,
   };
-  return messages[language] + getBackToMenuMessage(language);
+  return messages[language];
 }
 
 // ============================================================
-// CONTENT FETCHERS
+// CONTENT SENDERS (fetch data and send with back button)
 // ============================================================
 
-async function getEventSchedule(guest: Guest): Promise<string> {
+async function sendEventSchedule(guest: Guest): Promise<void> {
   const language = guest.user_language || 'EN';
   const cacheKey = `events_${language}_${guest.user_side}`;
   const cached = getCached(cacheKey);
-  if (cached) return cached;
+
+  if (cached) {
+    await sendContentWithBackButton(guest.phone_number, cached, language);
+    return;
+  }
 
   const supabase = getSupabase();
 
@@ -527,7 +581,12 @@ async function getEventSchedule(guest: Guest): Promise<string> {
   const { data: events, error } = await query;
 
   if (error || !events || events.length === 0) {
-    return getStubResponse('Schedule', language);
+    await sendContentWithBackButton(
+      guest.phone_number,
+      getStubContent('Schedule', language),
+      language
+    );
+    return;
   }
 
   const headers: Record<UserLanguage, string> = {
@@ -558,16 +617,20 @@ async function getEventSchedule(guest: Guest): Promise<string> {
     })
     .join('\n\n');
 
-  const result = `${headers[language]}\n\n${eventList}${getBackToMenuMessage(language)}`;
-  setCache(cacheKey, result);
-  return result;
+  const content = `${headers[language]}\n\n${eventList}`;
+  setCache(cacheKey, content);
+  await sendContentWithBackButton(guest.phone_number, content, language);
 }
 
-async function getVenuesAndDirections(guest: Guest): Promise<string> {
+async function sendVenuesAndDirections(guest: Guest): Promise<void> {
   const language = guest.user_language || 'EN';
   const cacheKey = `venues_${language}`;
   const cached = getCached(cacheKey);
-  if (cached) return cached;
+
+  if (cached) {
+    await sendContentWithBackButton(guest.phone_number, cached, language);
+    return;
+  }
 
   const supabase = getSupabase();
   const { data: venues, error } = await supabase
@@ -576,7 +639,12 @@ async function getVenuesAndDirections(guest: Guest): Promise<string> {
     .order('name', { ascending: true });
 
   if (error || !venues || venues.length === 0) {
-    return getStubResponse('Venues', language);
+    await sendContentWithBackButton(
+      guest.phone_number,
+      getStubContent('Venues', language),
+      language
+    );
+    return;
   }
 
   const headers: Record<UserLanguage, string> = {
@@ -608,74 +676,20 @@ async function getVenuesAndDirections(guest: Guest): Promise<string> {
     })
     .join('\n\n');
 
-  const result = `${headers[language]}\n\n${venueList}${getBackToMenuMessage(language)}`;
-  setCache(cacheKey, result);
-  return result;
+  const content = `${headers[language]}\n\n${venueList}`;
+  setCache(cacheKey, content);
+  await sendContentWithBackButton(guest.phone_number, content, language);
 }
 
-async function getDressCodes(guest: Guest): Promise<string> {
-  const language = guest.user_language || 'EN';
-  const cacheKey = `dresscodes_${language}_${guest.user_side}`;
-  const cached = getCached(cacheKey);
-  if (cached) return cached;
-
-  const supabase = getSupabase();
-
-  let query = supabase
-    .from('events')
-    .select('name, name_hi, name_pa, dress_code, dress_code_hi, dress_code_pa, side')
-    .not('dress_code', 'is', null)
-    .order('sort_order', { ascending: true });
-
-  // Filter by side
-  if (guest.user_side) {
-    query = query.or(`side.eq.${guest.user_side},side.eq.BOTH`);
-  }
-
-  const { data: events, error } = await query;
-
-  if (error || !events || events.length === 0) {
-    return getStubResponse('Dress Code', language);
-  }
-
-  const headers: Record<UserLanguage, string> = {
-    EN: '*Dress Code*',
-    HI: '*ड्रेस कोड*',
-    PA: '*ਡ੍ਰੈੱਸ ਕੋਡ*',
-  };
-
-  const dressCodes = events
-    .map((event) => {
-      const name =
-        (language === 'HI' && event.name_hi) || (language === 'PA' && event.name_pa) || event.name;
-
-      const dressCode =
-        (language === 'HI' && event.dress_code_hi) ||
-        (language === 'PA' && event.dress_code_pa) ||
-        event.dress_code;
-
-      return `*${name}*\n${dressCode}`;
-    })
-    .join('\n\n');
-
-  // Add link to dress code page with appropriate language
-  const langPath = language === 'HI' ? '/hi' : language === 'PA' ? '/pa' : '';
-  const viewMore: Record<UserLanguage, string> = {
-    EN: 'View color palettes',
-    HI: 'रंग पैलेट देखें',
-    PA: 'ਰੰਗ ਪੈਲੇਟ ਦੇਖੋ',
-  };
-
-  const result = `${headers[language]}\n\n${dressCodes}\n\n${viewMore[language]}: https://wedding-jarvis-production.up.railway.app/dress-code${langPath}${getBackToMenuMessage(language)}`;
-  setCache(cacheKey, result);
-  return result;
-}
-
-async function getFAQs(guest: Guest): Promise<string> {
+async function sendFAQs(guest: Guest): Promise<void> {
   const language = guest.user_language || 'EN';
   const cacheKey = `faqs_${language}`;
   const cached = getCached(cacheKey);
-  if (cached) return cached;
+
+  if (cached) {
+    await sendContentWithBackButton(guest.phone_number, cached, language);
+    return;
+  }
 
   const supabase = getSupabase();
   const { data: faqs, error } = await supabase
@@ -684,7 +698,12 @@ async function getFAQs(guest: Guest): Promise<string> {
     .order('sort_order', { ascending: true });
 
   if (error || !faqs || faqs.length === 0) {
-    return getStubResponse('FAQs', language);
+    await sendContentWithBackButton(
+      guest.phone_number,
+      getStubContent('FAQs', language),
+      language
+    );
+    return;
   }
 
   const headers: Record<UserLanguage, string> = {
@@ -707,16 +726,20 @@ async function getFAQs(guest: Guest): Promise<string> {
     })
     .join('\n\n');
 
-  const result = `${headers[language]}\n\n${faqList}${getBackToMenuMessage(language)}`;
-  setCache(cacheKey, result);
-  return result;
+  const content = `${headers[language]}\n\n${faqList}`;
+  setCache(cacheKey, content);
+  await sendContentWithBackButton(guest.phone_number, content, language);
 }
 
-async function getCoordinatorContact(guest: Guest): Promise<string> {
+async function sendCoordinatorContact(guest: Guest): Promise<void> {
   const language = guest.user_language || 'EN';
   const cacheKey = `coordinator_${language}_${guest.user_side}`;
   const cached = getCached(cacheKey);
-  if (cached) return cached;
+
+  if (cached) {
+    await sendContentWithBackButton(guest.phone_number, cached, language);
+    return;
+  }
 
   const supabase = getSupabase();
 
@@ -738,20 +761,26 @@ async function getCoordinatorContact(guest: Guest): Promise<string> {
     const { data: anyContact } = await fallbackQuery.limit(1);
 
     if (!anyContact || anyContact.length === 0) {
-      return getStubResponse('Emergency Contact', language);
+      await sendContentWithBackButton(
+        guest.phone_number,
+        getStubContent('Emergency Contact', language),
+        language
+      );
+      return;
     }
 
-    const result = formatContactInfo(anyContact[0] as CoordinatorContact, language);
-    setCache(cacheKey, result);
-    return result;
+    const content = formatContactContent(anyContact[0] as CoordinatorContact, language);
+    setCache(cacheKey, content);
+    await sendContentWithBackButton(guest.phone_number, content, language);
+    return;
   }
 
-  const result = formatContactInfo(contacts[0] as CoordinatorContact, language);
-  setCache(cacheKey, result);
-  return result;
+  const content = formatContactContent(contacts[0] as CoordinatorContact, language);
+  setCache(cacheKey, content);
+  await sendContentWithBackButton(guest.phone_number, content, language);
 }
 
-function formatContactInfo(contact: CoordinatorContact, language: UserLanguage): string {
+function formatContactContent(contact: CoordinatorContact, language: UserLanguage): string {
   const headers: Record<UserLanguage, string> = {
     EN: '*Emergency Contact*',
     HI: '*आपातकालीन संपर्क*',
@@ -769,6 +798,5 @@ function formatContactInfo(contact: CoordinatorContact, language: UserLanguage):
     text += ` (${contact.role})`;
   }
   text += `\n${phoneLabels[language]}: ${contact.phone_number}`;
-  text += getBackToMenuMessage(language);
   return text;
 }
