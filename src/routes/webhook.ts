@@ -3,7 +3,8 @@ import { config } from '../config';
 import { sendTextMessage } from '../services/whatsappClient';
 import { handleMessage } from '../services/botRouter';
 import { findOrCreateGuest } from '../repositories/guests';
-import { logMessage } from '../repositories/messageLogs';
+import { logMessage, updateMessageStatus } from '../repositories/messageLogs';
+import type { MessageStatus } from '../types';
 import { verifyWebhookSignature } from '../middleware/webhookVerify';
 import { INTERACTIVE_PREFIXES } from '../constants/buttonIds';
 import type { WhatsAppInboundMessage } from '../types';
@@ -65,6 +66,12 @@ async function processWebhook(body: WhatsAppInboundMessage): Promise<void> {
       if (value.statuses) {
         for (const status of value.statuses) {
           console.log(`Message ${status.id} status: ${status.status}`);
+          // Update message status in database
+          if (['sent', 'delivered', 'read', 'failed'].includes(status.status)) {
+            updateMessageStatus(status.id, status.status as MessageStatus).catch((err) =>
+              console.error('Failed to update message status:', err)
+            );
+          }
         }
         continue;
       }
@@ -144,14 +151,16 @@ async function handleInboundMessage(
 
     // If responseText is null, an interactive message was already sent
     if (responseText !== null) {
-      // Send the response immediately
-      await sendTextMessage({ to: phoneNumber, text: responseText });
-      console.log(`Response sent to ${phoneNumber}`);
+      // Send the response immediately and capture the message ID
+      const sendResponse = await sendTextMessage({ to: phoneNumber, text: responseText });
+      const wamid = sendResponse.messages?.[0]?.id;
+      console.log(`Response sent to ${phoneNumber} (wamid: ${wamid})`);
 
       // Log outbound message in background (fire and forget)
-      Promise.all([inboundLogPromise, logMessage(phoneNumber, 'outbound', responseText)]).catch(
-        (err) => console.error('Logging error:', err)
-      );
+      Promise.all([
+        inboundLogPromise,
+        logMessage(phoneNumber, 'outbound', responseText, undefined, wamid),
+      ]).catch((err) => console.error('Logging error:', err));
     } else {
       console.log(`Interactive message sent to ${phoneNumber} (no text response needed)`);
       // Still wait for inbound log

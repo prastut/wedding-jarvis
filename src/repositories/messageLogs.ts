@@ -1,5 +1,5 @@
 import { getSupabase } from '../db/client';
-import type { MessageLog, Guest } from '../types';
+import type { MessageLog, Guest, MessageStatus } from '../types';
 
 export interface MessageWithGuest extends MessageLog {
   guest: Pick<Guest, 'id' | 'name' | 'user_language' | 'user_side'> | null;
@@ -9,7 +9,8 @@ export async function logMessage(
   phoneNumber: string,
   direction: 'inbound' | 'outbound',
   messageText: string,
-  rawPayload?: Record<string, unknown>
+  rawPayload?: Record<string, unknown>,
+  wamid?: string
 ): Promise<MessageLog> {
   const supabase = getSupabase();
 
@@ -20,6 +21,8 @@ export async function logMessage(
       direction,
       message_text: messageText,
       raw_payload: rawPayload || null,
+      wamid: wamid || null,
+      status: 'sent',
     })
     .select()
     .single();
@@ -30,6 +33,22 @@ export async function logMessage(
   }
 
   return data;
+}
+
+export async function updateMessageStatus(
+  wamid: string,
+  status: MessageStatus
+): Promise<void> {
+  const supabase = getSupabase();
+
+  const { error } = await supabase
+    .from('message_logs')
+    .update({ status })
+    .eq('wamid', wamid);
+
+  if (error) {
+    console.error('Failed to update message status:', error);
+  }
 }
 
 export async function getMessageLogs(
@@ -118,6 +137,8 @@ export async function getRecentMessages(options: {
     direction: msg.direction as 'inbound' | 'outbound',
     message_text: msg.message_text,
     raw_payload: msg.raw_payload,
+    wamid: msg.wamid || null,
+    status: msg.status || 'sent',
     created_at: msg.created_at,
     guest: guestMap.get(msg.phone_number) || null,
   }));

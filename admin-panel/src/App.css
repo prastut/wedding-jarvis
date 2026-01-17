@@ -1078,14 +1078,42 @@ button:disabled {
   white-space: pre-wrap;
 }
 
+.message-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 4px;
+}
+
 .message-time {
   font-size: 11px;
-  margin-top: 4px;
   opacity: 0.7;
 }
 
-.chat-message.outbound .message-time {
-  text-align: right;
+.status-ticks {
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.status-ticks.sent {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.status-ticks.delivered {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.status-ticks.read {
+  color: #34d399;
+}
+
+.status-ticks.failed {
+  color: #f87171;
+}
+
+.chat-message.inbound .message-meta {
+  justify-content: flex-start;
 }
 
 /* Activity Page */
@@ -1110,6 +1138,29 @@ button:disabled {
 
 .auto-refresh-toggle.active {
   color: var(--success);
+}
+
+.activity-filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.activity-filters input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  width: 180px;
+}
+
+.activity-filters select {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
 }
 
 .activity-list {

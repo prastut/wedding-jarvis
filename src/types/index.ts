@@ -107,12 +107,16 @@ export interface SendLog {
   created_at: string;
 }
 
+export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
+
 export interface MessageLog {
   id: string;
   phone_number: string;
   direction: 'inbound' | 'outbound';
   message_text: string;
   raw_payload: Record<string, unknown> | null;
+  wamid: string | null;
+  status: MessageStatus;
   created_at: string;
 }
 

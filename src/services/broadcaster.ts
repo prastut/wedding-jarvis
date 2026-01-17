@@ -99,13 +99,14 @@ export async function sendBroadcast(
         guest.user_language as UserLanguage | null
       );
 
-      await sendTextMessage({
+      const sendResponse = await sendTextMessage({
         to: guest.phone_number,
         text: messageText,
       });
+      const wamid = sendResponse.messages?.[0]?.id;
 
       // Log the outbound message
-      await logMessage(guest.phone_number, 'outbound', messageText);
+      await logMessage(guest.phone_number, 'outbound', messageText, undefined, wamid);
 
       // Log success in send_logs
       await supabase.from('send_logs').insert({
@@ -197,15 +198,16 @@ export async function sendTestBroadcast(message: string): Promise<BroadcastResul
 
   for (const guest of guests) {
     try {
-      await sendTextMessage({
+      const sendResponse = await sendTextMessage({
         to: guest.phone_number,
         text: message,
       });
+      const wamid = sendResponse.messages?.[0]?.id;
 
-      await logMessage(guest.phone_number, 'outbound', message);
+      await logMessage(guest.phone_number, 'outbound', message, undefined, wamid);
 
       result.sent++;
-      console.log(`Sent to ${guest.phone_number}`);
+      console.log(`Sent to ${guest.phone_number} (wamid: ${wamid})`);
 
       if (config.broadcast.delayMs > 0) {
         await delay(config.broadcast.delayMs);

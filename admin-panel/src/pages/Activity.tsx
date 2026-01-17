@@ -10,21 +10,20 @@ export default function Activity() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [selectedPhone, setSelectedPhone] = useState<string | null>(null);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
+  const [directionFilter, setDirectionFilter] = useState<'all' | 'inbound' | 'outbound'>('all');
+  const [nameFilter, setNameFilter] = useState('');
   const latestTimestampRef = useRef<string | null>(null);
   const isInitialLoadRef = useRef(true);
 
   const loadMessages = useCallback(async (checkForNew = false) => {
     try {
-      const params: { direction?: 'inbound'; since?: string; limit?: number } = {
-        limit: 50,
-      };
+      // For polling, only get messages newer than latest; otherwise get last 24 hours
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const since = checkForNew && latestTimestampRef.current
+        ? latestTimestampRef.current
+        : twentyFourHoursAgo;
 
-      // Only check for new messages if we have a latest timestamp and this isn't the initial load
-      if (checkForNew && latestTimestampRef.current) {
-        params.since = latestTimestampRef.current;
-      }
-
-      const data = await adminApi.getRecentMessages(params);
+      const data = await adminApi.getRecentMessages({ limit: 200, since });
 
       if (checkForNew && latestTimestampRef.current && data.messages.length > 0) {
         // We have new messages
@@ -102,10 +101,35 @@ export default function Activity() {
     return msg.phone_number;
   }
 
+  // Filter messages based on current filters
+  const filteredMessages = messages.filter((msg) => {
+    // Direction filter
+    if (directionFilter !== 'all' && msg.direction !== directionFilter) {
+      return false;
+    }
+    // Name filter
+    if (nameFilter) {
+      const name = msg.guest?.name?.toLowerCase() || '';
+      const phone = msg.phone_number.toLowerCase();
+      const search = nameFilter.toLowerCase();
+      if (!name.includes(search) && !phone.includes(search)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // Get unique names for datalist suggestions
+  const uniqueNames = [...new Set(
+    messages
+      .map((m) => m.guest?.name)
+      .filter((name): name is string => !!name)
+  )].sort();
+
   return (
     <div className="activity-page">
       <div className="page-header">
-        <h1>Live Activity</h1>
+        <h1>Live Activity <span style={{ fontSize: '14px', fontWeight: 'normal', color: '#6b7280' }}>(Last 24h)</span></h1>
         <label className={`auto-refresh-toggle ${autoRefresh ? 'active' : ''}`}>
           <input
             type="checkbox"
@@ -114,6 +138,37 @@ export default function Activity() {
           />
           Auto-refresh {autoRefresh ? 'ON' : 'OFF'}
         </label>
+      </div>
+
+      <div className="activity-filters">
+        <input
+          type="text"
+          placeholder="Filter by name..."
+          value={nameFilter}
+          onChange={(e) => setNameFilter(e.target.value)}
+          list="name-suggestions"
+        />
+        <datalist id="name-suggestions">
+          {uniqueNames.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
+        <select
+          value={directionFilter}
+          onChange={(e) => setDirectionFilter(e.target.value as 'all' | 'inbound' | 'outbound')}
+        >
+          <option value="all">All</option>
+          <option value="inbound">Inbound only</option>
+          <option value="outbound">Outbound only</option>
+        </select>
+        {(nameFilter || directionFilter !== 'all') && (
+          <button
+            className="btn-secondary btn-small"
+            onClick={() => { setNameFilter(''); setDirectionFilter('all'); }}
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       {error && <div className="error">{error}</div>}
@@ -128,10 +183,12 @@ export default function Activity() {
         <div className="loading">Loading messages...</div>
       ) : (
         <div className="activity-list">
-          {messages.length === 0 ? (
-            <div className="activity-empty">No messages yet</div>
+          {filteredMessages.length === 0 ? (
+            <div className="activity-empty">
+              {messages.length === 0 ? 'No messages in the last 24 hours' : 'No messages match your filters'}
+            </div>
           ) : (
-            messages.map((msg) => (
+            filteredMessages.map((msg) => (
               <div
                 key={msg.id}
                 className="activity-item"

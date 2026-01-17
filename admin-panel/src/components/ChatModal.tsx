@@ -1,10 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
 import { adminApi } from '../api/client';
-import type { MessageLog, Guest } from '../api/client';
+import type { MessageLog, Guest, MessageStatus } from '../api/client';
 
 interface ChatModalProps {
   phoneNumber: string;
   onClose: () => void;
+}
+
+function StatusTicks({ status }: { status: MessageStatus }) {
+  switch (status) {
+    case 'read':
+      return <span className="status-ticks read" title="Read">✓✓</span>;
+    case 'delivered':
+      return <span className="status-ticks delivered" title="Delivered">✓✓</span>;
+    case 'failed':
+      return <span className="status-ticks failed" title="Failed">!</span>;
+    case 'sent':
+    default:
+      return <span className="status-ticks sent" title="Sent">✓</span>;
+  }
 }
 
 export default function ChatModal({ phoneNumber, onClose }: ChatModalProps) {
@@ -98,7 +112,10 @@ export default function ChatModal({ phoneNumber, onClose }: ChatModalProps) {
                 <div key={msg.id} className={`chat-message ${msg.direction}`}>
                   <div className="message-bubble">
                     <div className="message-text">{msg.message_text}</div>
-                    <div className="message-time">{formatTime(msg.created_at)}</div>
+                    <div className="message-meta">
+                      <span className="message-time">{formatTime(msg.created_at)}</span>
+                      {msg.direction === 'outbound' && <StatusTicks status={msg.status} />}
+                    </div>
                   </div>
                 </div>
               ))
