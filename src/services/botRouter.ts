@@ -1,13 +1,6 @@
 import { getSupabase } from '../db/client';
-import type {
-  Event,
-  Venue,
-  FAQ,
-  CoordinatorContact,
-  Guest,
-  UserLanguage,
-  UserSide,
-} from '../types';
+import type { Venue, FAQ, CoordinatorContact, Guest, UserLanguage, UserSide } from '../types';
+import { getEventsBySide, type EventWithVenue } from '../repositories/events';
 import {
   parseInteractiveMessage,
   isLanguageId,
@@ -403,60 +396,58 @@ async function sendEventSchedule(guest: Guest): Promise<void> {
     return;
   }
 
-  const supabase = getSupabase();
+  try {
+    const events = await getEventsBySide(guest.user_side);
 
-  // Fetch events filtered by side
-  let query = supabase
-    .from('events')
-    .select('*, venues(name)')
-    .order('sort_order', { ascending: true });
+    if (events.length === 0) {
+      await sendContentWithBackButton(
+        guest.phone_number,
+        getMessage('error.noData', language),
+        language
+      );
+      return;
+    }
 
-  // Filter by side: show events for guest's side or BOTH
-  if (guest.user_side) {
-    query = query.or(`side.eq.${guest.user_side},side.eq.BOTH`);
-  }
+    const header = getMessage('content.schedule.header', language);
+    const atLabel = getMessage('content.event.at', language);
+    const venueLabel = getMessage('content.event.venue', language);
 
-  const { data: events, error } = await query;
+    const eventList = events
+      .map((event: EventWithVenue) => {
+        const date = new Date(event.start_time);
+        const locale = language === 'EN' ? 'en-US' : language === 'HI' ? 'hi-IN' : 'pa-IN';
+        const dateStr = date.toLocaleDateString(locale, {
+          weekday: 'long',
+          month: 'long',
+          day: 'numeric',
+        });
+        const timeStr = date.toLocaleTimeString(locale, {
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+        const venue = event.venues?.name || '';
 
-  if (error || !events || events.length === 0) {
+        // Get translated name
+        const name =
+          (language === 'HI' && event.name_hi) ||
+          (language === 'PA' && event.name_pa) ||
+          event.name;
+
+        return `*${name}*\n${dateStr} ${atLabel} ${timeStr}${venue ? `\n${venueLabel}: ${venue}` : ''}`;
+      })
+      .join('\n\n');
+
+    const content = `${header}\n\n${eventList}`;
+    setCache(cacheKey, content);
+    await sendContentWithBackButton(guest.phone_number, content, language);
+  } catch (error) {
+    console.error('[EVENTS] Error fetching event schedule:', error);
     await sendContentWithBackButton(
       guest.phone_number,
       getMessage('error.noData', language),
       language
     );
-    return;
   }
-
-  const header = getMessage('content.schedule.header', language);
-  const atLabel = getMessage('content.event.at', language);
-  const venueLabel = getMessage('content.event.venue', language);
-
-  const eventList = events
-    .map((event: Event & { venues?: { name: string } }) => {
-      const date = new Date(event.start_time);
-      const locale = language === 'EN' ? 'en-US' : language === 'HI' ? 'hi-IN' : 'pa-IN';
-      const dateStr = date.toLocaleDateString(locale, {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-      });
-      const timeStr = date.toLocaleTimeString(locale, {
-        hour: 'numeric',
-        minute: '2-digit',
-      });
-      const venue = event.venues?.name || '';
-
-      // Get translated name
-      const name =
-        (language === 'HI' && event.name_hi) || (language === 'PA' && event.name_pa) || event.name;
-
-      return `*${name}*\n${dateStr} ${atLabel} ${timeStr}${venue ? `\n${venueLabel}: ${venue}` : ''}`;
-    })
-    .join('\n\n');
-
-  const content = `${header}\n\n${eventList}`;
-  setCache(cacheKey, content);
-  await sendContentWithBackButton(guest.phone_number, content, language);
 }
 
 async function sendVenuesAndDirections(guest: Guest): Promise<void> {

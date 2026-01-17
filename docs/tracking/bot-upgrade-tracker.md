@@ -12,11 +12,9 @@ You are implementing the Wedding WhatsApp Concierge upgrade.
 3. Read the project tracker: `docs/tracking/bot-upgrade-tracker.md`
 4. Read ALL completed reports in `docs/reports/bot-upgrade/` in sequential order
 
-I want you to implement the next PR.
+I want you to implement the next PR-06
 
 ## During Implementation
-
-First check if we are on main branch, if we are not then give error. If we are then, switch to a new branch with relevant name.
 
 Implement the PR according to its specification in the tracker. Follow the existing code patterns in the codebase (see CLAUDE.md for conventions).
 
@@ -24,7 +22,6 @@ Implement the PR according to its specification in the tracker. Follow the exist
 
 1. Generate a report file at `docs/reports/bot-upgrade/PR-{XX}-{slug}.md` using the template in the tracker
 2. Update the Completion Log table in `docs/tracking/bot-upgrade-tracker.md`
-3. Commit all changes with a descriptive message
 ```
 
 ---
@@ -92,7 +89,7 @@ _PR-01 and PR-02 can run in parallel after PR-00 is validated._
 
 | PR    | Title                              | Parallel | Status  | Dependencies |
 | ----- | ---------------------------------- | -------- | ------- | ------------ |
-| PR-05 | Event Schedule (Side-Filtered)     | A        | Pending | PR-04        |
+| PR-05 | Event Schedule (Side-Filtered)     | A        | ✅ Done | PR-04        |
 | PR-06 | Venue Details                      | A        | Pending | PR-04        |
 | PR-07 | Emergency Contacts (Side-Specific) | A        | Pending | PR-04        |
 | PR-08 | FAQs + Travel + Gifts              | A        | Pending | PR-04        |
@@ -587,7 +584,7 @@ curl -X POST http://localhost:3000/test-interactive/list?to=YOUR_PHONE
 | PR-02 | 2026-01-17 | PR-02-interactive-client.md  | Interactive client + constants + helpers         |
 | PR-03 | 2026-01-17 | PR-03-onboarding-flow.md     | Onboarding flow: language → side → menu          |
 | PR-04 | 2026-01-17 | PR-04-i18n-system.md         | i18n system + EN/HI/PA translations + dress code |
-| PR-05 | -          | -                            | Parallel Group A                                 |
+| PR-05 | 2026-01-17 | PR-05-event-schedule.md      | Events repository + side-filtered schedule       |
 | PR-06 | -          | -                            | Parallel Group A                                 |
 | PR-07 | -          | -                            | Parallel Group A                                 |
 | PR-08 | -          | -                            | Parallel Group A                                 |
