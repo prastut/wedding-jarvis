@@ -131,9 +131,10 @@ async function handleSideState(guest: Guest, buttonId: string | null): Promise<s
     if (side) {
       console.log(`[ONBOARDING] ${guest.phone_number} selected side: ${side}`);
       const updatedGuest = await updateGuestSide(guest.id, side);
-      await showMainMenu(guest.phone_number, guest.user_language!);
-      // Show a welcome message with the menu
-      return getWelcomeMessage(guest.user_language!, updatedGuest.user_side!);
+      // Show welcome message merged with menu
+      const welcomeMessage = getWelcomeMessage(guest.user_language!, updatedGuest.user_side!);
+      await showMainMenu(guest.phone_number, guest.user_language!, welcomeMessage);
+      return null;
     }
   }
 
@@ -312,8 +313,13 @@ Please select your side:`,
 
 /**
  * Show main menu list message (in user's language)
+ * @param welcomePrefix - Optional welcome message to prepend to the menu body
  */
-async function showMainMenu(phoneNumber: string, language: UserLanguage): Promise<void> {
+async function showMainMenu(
+  phoneNumber: string,
+  language: UserLanguage,
+  welcomePrefix?: string
+): Promise<void> {
   const menus: Record<
     UserLanguage,
     {
@@ -418,8 +424,11 @@ async function showMainMenu(phoneNumber: string, language: UserLanguage): Promis
     },
   ];
 
+  // Combine welcome message with menu body if provided
+  const body = welcomePrefix ? `${welcomePrefix}\n\n${menu.body}` : menu.body;
+
   try {
-    await sendListMessage(phoneNumber, menu.body, menu.button, sections);
+    await sendListMessage(phoneNumber, body, menu.button, sections);
     console.log(`[INTERACTIVE] Sent main menu to ${phoneNumber}`);
   } catch (error) {
     console.error(`[INTERACTIVE] Failed to send main menu:`, error);
@@ -444,13 +453,13 @@ function getWelcomeMessage(language: UserLanguage, side: UserSide): string {
   const messages: Record<UserLanguage, string> = {
     EN: `Welcome, ${sideName.EN}! 🎉
 
-You're all set! Use the menu above to explore wedding details.`,
+You're all set!`,
     HI: `स्वागत है, ${sideName.HI}! 🎉
 
-आप तैयार हैं! शादी की जानकारी के लिए ऊपर मेनू का उपयोग करें।`,
+आप तैयार हैं!`,
     PA: `ਜੀ ਆਇਆਂ ਨੂੰ, ${sideName.PA}! 🎉
 
-ਤੁਸੀਂ ਤਿਆਰ ਹੋ! ਵਿਆਹ ਦੇ ਵੇਰਵਿਆਂ ਲਈ ਉੱਪਰ ਮੇਨੂ ਦੀ ਵਰਤੋਂ ਕਰੋ।`,
+ਤੁਸੀਂ ਤਿਆਰ ਹੋ!`,
   };
 
   return messages[language];
