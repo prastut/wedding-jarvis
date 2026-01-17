@@ -28,6 +28,13 @@ import {
   type ListSection,
 } from './whatsappClient';
 import { updateGuestLanguage, updateGuestSide, updateGuestOptIn } from '../repositories/guests';
+import {
+  getMessage,
+  getMessageWithValues,
+  getSideName,
+  getSideWithName,
+  getMenuItems,
+} from '../i18n';
 
 // Simple in-memory cache (5 minute TTL)
 const cache: Map<string, { data: string; expires: number }> = new Map();
@@ -60,7 +67,7 @@ export async function handleMessage(guest: Guest, messageText: string): Promise<
   // Handle opt-out/opt-in
   if (text === 'STOP') {
     await updateGuestOptIn(guest.phone_number, false);
-    return 'You have been unsubscribed. Reply START to subscribe again.';
+    return getMessage('optOut.confirm', 'EN'); // Always in English
   }
 
   if (text === 'START') {
@@ -151,10 +158,12 @@ async function handleOnboardedState(
   buttonId: string | null,
   textInput: string
 ): Promise<string | null> {
+  const language = guest.user_language!;
+
   // Handle navigation
   if (buttonId && isNavId(buttonId)) {
     if (buttonId === NAV_IDS.BACK_TO_MENU) {
-      await showMainMenu(guest.phone_number, guest.user_language!);
+      await showMainMenu(guest.phone_number, language);
       return null;
     }
   }
@@ -167,19 +176,19 @@ async function handleOnboardedState(
   // Handle button presses for specific flows (language re-selection, etc.)
   if (buttonId && isLanguageId(buttonId)) {
     // They somehow got a language button while onboarded - treat as reset
-    await showMainMenu(guest.phone_number, guest.user_language!);
+    await showMainMenu(guest.phone_number, language);
     return null;
   }
 
   if (buttonId && isSideId(buttonId)) {
     // They somehow got a side button while onboarded - treat as reset
-    await showMainMenu(guest.phone_number, guest.user_language!);
+    await showMainMenu(guest.phone_number, language);
     return null;
   }
 
   // Handle text commands (legacy support)
   if (textInput === 'MENU' || textInput === '0' || textInput === 'HI' || textInput === 'HELLO') {
-    await showMainMenu(guest.phone_number, guest.user_language!);
+    await showMainMenu(guest.phone_number, language);
     return null;
   }
 
@@ -200,8 +209,8 @@ async function handleOnboardedState(
   }
 
   // Unknown input - show fallback menu
-  await showMainMenu(guest.phone_number, guest.user_language!);
-  return getFallbackMessage(guest.user_language!);
+  await showMainMenu(guest.phone_number, language);
+  return getMessage('fallback.unknown', language);
 }
 
 /**
@@ -222,18 +231,14 @@ async function handleMenuSelection(guest: Guest, menuId: string): Promise<string
 
     case MENU_IDS.TRAVEL:
       // TODO PR-08: Travel info
-      await sendContentWithBackButton(
-        guest.phone_number,
-        getStubContent('Travel & Stay', language),
-        language
-      );
+      await sendContentWithBackButton(guest.phone_number, getMessage('travel.info', language), language);
       return null;
 
     case MENU_IDS.RSVP:
       // TODO PR-09: Full RSVP flow
       await sendContentWithBackButton(
         guest.phone_number,
-        getStubContent('RSVP', language),
+        getMessageWithValues('stub.comingSoon', language, { feature: 'RSVP' }),
         language
       );
       return null;
@@ -248,18 +253,14 @@ async function handleMenuSelection(guest: Guest, menuId: string): Promise<string
 
     case MENU_IDS.GIFTS:
       // TODO PR-08: Gift registry
-      await sendContentWithBackButton(
-        guest.phone_number,
-        getStubContent('Gift Registry', language),
-        language
-      );
+      await sendContentWithBackButton(guest.phone_number, getMessage('gifts.info', language), language);
       return null;
 
     case MENU_IDS.RESET:
       // TODO PR-10: Reset flow
       await sendContentWithBackButton(
         guest.phone_number,
-        getStubContent('Reset', language),
+        getMessageWithValues('stub.comingSoon', language, { feature: 'Reset' }),
         language
       );
       return null;
@@ -278,9 +279,9 @@ async function handleMenuSelection(guest: Guest, menuId: string): Promise<string
  * Show language selection buttons (always in English since language unknown)
  */
 async function showLanguageSelection(phoneNumber: string): Promise<void> {
-  const body = `Welcome to Sanjoli & Shreyas's Wedding! 🌸
+  const body = `${getMessage('welcome.title', 'EN')}
 
-Please select your language:`;
+${getMessage('welcome.selectLanguage', 'EN')}`;
 
   const buttons: ReplyButton[] = [
     { id: LANG_IDS.ENGLISH, title: 'English' },
@@ -301,38 +302,17 @@ Please select your language:`;
  * Show side selection buttons (in user's language)
  */
 async function showSideSelection(phoneNumber: string, language: UserLanguage): Promise<void> {
-  const messages: Record<UserLanguage, { body: string; groom: string; bride: string }> = {
-    EN: {
-      body: `Thank you! 🙏
+  const body = `${getMessage('side.thankYou', language)}
 
-Please select your side:`,
-      groom: "Groom's Side (Shreyas)",
-      bride: "Bride's Side (Sanjoli)",
-    },
-    HI: {
-      body: `धन्यवाद! 🙏
+${getMessage('side.selectPrompt', language)}`;
 
-कृपया अपना पक्ष चुनें:`,
-      groom: 'वर पक्ष (श्रेयस)',
-      bride: 'वधू पक्ष (संजोली)',
-    },
-    PA: {
-      body: `ਧੰਨਵਾਦ! 🙏
-
-ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਪੱਖ ਚੁਣੋ:`,
-      groom: 'ਲਾੜੇ ਵਾਲੇ (ਸ਼੍ਰੇਯਸ)',
-      bride: 'ਲਾੜੀ ਵਾਲੇ (ਸੰਜੋਲੀ)',
-    },
-  };
-
-  const msg = messages[language];
   const buttons: ReplyButton[] = [
-    { id: SIDE_IDS.GROOM, title: msg.groom },
-    { id: SIDE_IDS.BRIDE, title: msg.bride },
+    { id: SIDE_IDS.GROOM, title: getSideWithName('GROOM', language) },
+    { id: SIDE_IDS.BRIDE, title: getSideWithName('BRIDE', language) },
   ];
 
   try {
-    await sendReplyButtons(phoneNumber, msg.body, buttons);
+    await sendReplyButtons(phoneNumber, body, buttons);
     console.log(`[INTERACTIVE] Sent side selection to ${phoneNumber}`);
   } catch (error) {
     console.error(`[INTERACTIVE] Failed to send side selection:`, error);
@@ -349,103 +329,12 @@ async function showMainMenu(
   language: UserLanguage,
   welcomePrefix?: string
 ): Promise<void> {
-  const menus: Record<
-    UserLanguage,
-    {
-      body: string;
-      button: string;
-      items: Array<{ id: string; title: string; description: string }>;
-    }
-  > = {
-    EN: {
-      body: 'How can I help you today?',
-      button: 'View Options',
-      items: [
-        { id: MENU_IDS.SCHEDULE, title: 'Event Schedule', description: 'View all wedding events' },
-        {
-          id: MENU_IDS.VENUE,
-          title: 'Venue & Directions',
-          description: 'Get venue details & maps',
-        },
-        {
-          id: MENU_IDS.TRAVEL,
-          title: 'Travel & Stay',
-          description: 'Travel and accommodation info',
-        },
-        { id: MENU_IDS.RSVP, title: 'RSVP', description: 'Confirm your attendance' },
-        { id: MENU_IDS.EMERGENCY, title: 'Emergency Contact', description: 'Get help immediately' },
-        { id: MENU_IDS.FAQ, title: 'FAQs', description: 'Common questions answered' },
-        { id: MENU_IDS.GIFTS, title: 'Gift Registry', description: 'View gift suggestions' },
-        {
-          id: MENU_IDS.RESET,
-          title: 'Change Language/Side',
-          description: 'Update your preferences',
-        },
-      ],
-    },
-    HI: {
-      body: 'मैं आज आपकी कैसे मदद कर सकता हूं?',
-      button: 'विकल्प देखें',
-      items: [
-        {
-          id: MENU_IDS.SCHEDULE,
-          title: 'कार्यक्रम सूची',
-          description: 'सभी शादी के कार्यक्रम देखें',
-        },
-        {
-          id: MENU_IDS.VENUE,
-          title: 'स्थान और दिशा',
-          description: 'स्थान विवरण और नक्शा प्राप्त करें',
-        },
-        { id: MENU_IDS.TRAVEL, title: 'यात्रा और ठहराव', description: 'यात्रा और आवास जानकारी' },
-        { id: MENU_IDS.RSVP, title: 'RSVP', description: 'अपनी उपस्थिति की पुष्टि करें' },
-        {
-          id: MENU_IDS.EMERGENCY,
-          title: 'आपातकालीन संपर्क',
-          description: 'तुरंत सहायता प्राप्त करें',
-        },
-        {
-          id: MENU_IDS.FAQ,
-          title: 'अक्सर पूछे जाने वाले प्रश्न',
-          description: 'सामान्य प्रश्नों के उत्तर',
-        },
-        { id: MENU_IDS.GIFTS, title: 'उपहार सूची', description: 'उपहार सुझाव देखें' },
-        {
-          id: MENU_IDS.RESET,
-          title: 'भाषा/पक्ष बदलें',
-          description: 'अपनी प्राथमिकताएं अपडेट करें',
-        },
-      ],
-    },
-    PA: {
-      body: 'ਅੱਜ ਮੈਂ ਤੁਹਾਡੀ ਕਿਵੇਂ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ?',
-      button: 'ਵਿਕਲਪ ਦੇਖੋ',
-      items: [
-        { id: MENU_IDS.SCHEDULE, title: 'ਸਮਾਗਮ ਸੂਚੀ', description: 'ਸਾਰੇ ਵਿਆਹ ਦੇ ਸਮਾਗਮ ਦੇਖੋ' },
-        {
-          id: MENU_IDS.VENUE,
-          title: 'ਸਥਾਨ ਅਤੇ ਦਿਸ਼ਾ',
-          description: 'ਸਥਾਨ ਵੇਰਵੇ ਅਤੇ ਨਕਸ਼ਾ ਪ੍ਰਾਪਤ ਕਰੋ',
-        },
-        {
-          id: MENU_IDS.TRAVEL,
-          title: 'ਯਾਤਰਾ ਅਤੇ ਠਹਿਰਾਅ',
-          description: 'ਯਾਤਰਾ ਅਤੇ ਰਹਿਣ ਦੀ ਜਾਣਕਾਰੀ',
-        },
-        { id: MENU_IDS.RSVP, title: 'RSVP', description: 'ਆਪਣੀ ਹਾਜ਼ਰੀ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ' },
-        { id: MENU_IDS.EMERGENCY, title: 'ਐਮਰਜੈਂਸੀ ਸੰਪਰਕ', description: 'ਤੁਰੰਤ ਮਦਦ ਪ੍ਰਾਪਤ ਕਰੋ' },
-        { id: MENU_IDS.FAQ, title: 'ਅਕਸਰ ਪੁੱਛੇ ਸਵਾਲ', description: 'ਆਮ ਸਵਾਲਾਂ ਦੇ ਜਵਾਬ' },
-        { id: MENU_IDS.GIFTS, title: 'ਤੋਹਫ਼ਾ ਸੂਚੀ', description: 'ਤੋਹਫ਼ੇ ਦੇ ਸੁਝਾਅ ਦੇਖੋ' },
-        { id: MENU_IDS.RESET, title: 'ਭਾਸ਼ਾ/ਪੱਖ ਬਦਲੋ', description: 'ਆਪਣੀਆਂ ਤਰਜੀਹਾਂ ਅੱਪਡੇਟ ਕਰੋ' },
-      ],
-    },
-  };
+  const menuItems = getMenuItems(language);
 
-  const menu = menus[language];
   const sections: ListSection[] = [
     {
       title: 'Menu',
-      rows: menu.items.map((item) => ({
+      rows: menuItems.map((item) => ({
         id: item.id,
         title: item.title,
         description: item.description,
@@ -454,10 +343,12 @@ async function showMainMenu(
   ];
 
   // Combine welcome message with menu body if provided
-  const body = welcomePrefix ? `${welcomePrefix}\n\n${menu.body}` : menu.body;
+  const menuBody = getMessage('menu.header', language);
+  const body = welcomePrefix ? `${welcomePrefix}\n\n${menuBody}` : menuBody;
+  const buttonText = getMessage('menu.button', language);
 
   try {
-    await sendListMessage(phoneNumber, body, menu.button, sections);
+    await sendListMessage(phoneNumber, body, buttonText, sections);
     console.log(`[INTERACTIVE] Sent main menu to ${phoneNumber}`);
   } catch (error) {
     console.error(`[INTERACTIVE] Failed to send main menu:`, error);
@@ -473,49 +364,8 @@ async function showMainMenu(
  * Get welcome message after completing onboarding
  */
 function getWelcomeMessage(language: UserLanguage, side: UserSide): string {
-  const sideName = {
-    EN: side === 'GROOM' ? "Groom's family" : "Bride's family",
-    HI: side === 'GROOM' ? 'वर पक्ष' : 'वधू पक्ष',
-    PA: side === 'GROOM' ? 'ਲਾੜੇ ਵਾਲੇ' : 'ਲਾੜੀ ਵਾਲੇ',
-  };
-
-  const messages: Record<UserLanguage, string> = {
-    EN: `Welcome, ${sideName.EN}! 🎉
-
-You're all set!`,
-    HI: `स्वागत है, ${sideName.HI}! 🎉
-
-आप तैयार हैं!`,
-    PA: `ਜੀ ਆਇਆਂ ਨੂੰ, ${sideName.PA}! 🎉
-
-ਤੁਸੀਂ ਤਿਆਰ ਹੋ!`,
-  };
-
-  return messages[language];
-}
-
-/**
- * Get fallback message for unknown inputs
- */
-function getFallbackMessage(language: UserLanguage): string {
-  const messages: Record<UserLanguage, string> = {
-    EN: "I didn't understand that. Please select an option from the menu:",
-    HI: 'मैं समझ नहीं पाया। कृपया मेनू से एक विकल्प चुनें:',
-    PA: 'ਮੈਂ ਸਮਝ ਨਹੀਂ ਸਕਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਮੇਨੂ ਤੋਂ ਇੱਕ ਵਿਕਲਪ ਚੁਣੋ:',
-  };
-  return messages[language];
-}
-
-/**
- * Get "Back to Menu" button label in user's language
- */
-function getBackToMenuLabel(language: UserLanguage): string {
-  const labels: Record<UserLanguage, string> = {
-    EN: 'Back to Menu',
-    HI: 'मेनू पर वापस',
-    PA: 'ਮੇਨੂ ਤੇ ਵਾਪਸ',
-  };
-  return labels[language];
+  const sideName = getSideName(side, language);
+  return getMessageWithValues('onboarding.welcome', language, { sideName });
 }
 
 /**
@@ -527,7 +377,7 @@ async function sendContentWithBackButton(
   language: UserLanguage
 ): Promise<void> {
   const buttons: ReplyButton[] = [
-    { id: NAV_IDS.BACK_TO_MENU, title: getBackToMenuLabel(language) },
+    { id: NAV_IDS.BACK_TO_MENU, title: getMessage('nav.backToMenu', language) },
   ];
 
   try {
@@ -537,18 +387,6 @@ async function sendContentWithBackButton(
     console.error(`[INTERACTIVE] Failed to send content with back button:`, error);
     throw error;
   }
-}
-
-/**
- * Get stub content for features not yet implemented
- */
-function getStubContent(feature: string, language: UserLanguage): string {
-  const messages: Record<UserLanguage, string> = {
-    EN: `${feature} feature coming soon!`,
-    HI: `${feature} सुविधा जल्द आ रही है!`,
-    PA: `${feature} ਸੁਵਿਧਾ ਜਲਦੀ ਆ ਰਹੀ ਹੈ!`,
-  };
-  return messages[language];
 }
 
 // ============================================================
@@ -583,27 +421,26 @@ async function sendEventSchedule(guest: Guest): Promise<void> {
   if (error || !events || events.length === 0) {
     await sendContentWithBackButton(
       guest.phone_number,
-      getStubContent('Schedule', language),
+      getMessage('error.noData', language),
       language
     );
     return;
   }
 
-  const headers: Record<UserLanguage, string> = {
-    EN: '*Event Schedule*',
-    HI: '*कार्यक्रम सूची*',
-    PA: '*ਸਮਾਗਮ ਸੂਚੀ*',
-  };
+  const header = getMessage('content.schedule.header', language);
+  const atLabel = getMessage('content.event.at', language);
+  const venueLabel = getMessage('content.event.venue', language);
 
   const eventList = events
     .map((event: Event & { venues?: { name: string } }) => {
       const date = new Date(event.start_time);
-      const dateStr = date.toLocaleDateString(language === 'EN' ? 'en-US' : 'hi-IN', {
+      const locale = language === 'EN' ? 'en-US' : language === 'HI' ? 'hi-IN' : 'pa-IN';
+      const dateStr = date.toLocaleDateString(locale, {
         weekday: 'long',
         month: 'long',
         day: 'numeric',
       });
-      const timeStr = date.toLocaleTimeString(language === 'EN' ? 'en-US' : 'hi-IN', {
+      const timeStr = date.toLocaleTimeString(locale, {
         hour: 'numeric',
         minute: '2-digit',
       });
@@ -613,11 +450,11 @@ async function sendEventSchedule(guest: Guest): Promise<void> {
       const name =
         (language === 'HI' && event.name_hi) || (language === 'PA' && event.name_pa) || event.name;
 
-      return `*${name}*\n${dateStr} at ${timeStr}${venue ? `\nVenue: ${venue}` : ''}`;
+      return `*${name}*\n${dateStr} ${atLabel} ${timeStr}${venue ? `\n${venueLabel}: ${venue}` : ''}`;
     })
     .join('\n\n');
 
-  const content = `${headers[language]}\n\n${eventList}`;
+  const content = `${header}\n\n${eventList}`;
   setCache(cacheKey, content);
   await sendContentWithBackButton(guest.phone_number, content, language);
 }
@@ -641,17 +478,15 @@ async function sendVenuesAndDirections(guest: Guest): Promise<void> {
   if (error || !venues || venues.length === 0) {
     await sendContentWithBackButton(
       guest.phone_number,
-      getStubContent('Venues', language),
+      getMessage('error.noData', language),
       language
     );
     return;
   }
 
-  const headers: Record<UserLanguage, string> = {
-    EN: '*Venue & Directions*',
-    HI: '*स्थान और दिशा-निर्देश*',
-    PA: '*ਸਥਾਨ ਅਤੇ ਦਿਸ਼ਾ-ਨਿਰਦੇਸ਼*',
-  };
+  const header = getMessage('content.venue.header', language);
+  const mapLabel = getMessage('content.venue.map', language);
+  const parkingLabel = getMessage('content.venue.parking', language);
 
   const venueList = venues
     .map((venue: Venue) => {
@@ -667,16 +502,16 @@ async function sendVenuesAndDirections(guest: Guest): Promise<void> {
 
       let text = `*${venue.name}*\n${address}`;
       if (venue.google_maps_link) {
-        text += `\nMap: ${venue.google_maps_link}`;
+        text += `\n${mapLabel}: ${venue.google_maps_link}`;
       }
       if (parking) {
-        text += `\nParking: ${parking}`;
+        text += `\n${parkingLabel}: ${parking}`;
       }
       return text;
     })
     .join('\n\n');
 
-  const content = `${headers[language]}\n\n${venueList}`;
+  const content = `${header}\n\n${venueList}`;
   setCache(cacheKey, content);
   await sendContentWithBackButton(guest.phone_number, content, language);
 }
@@ -700,17 +535,13 @@ async function sendFAQs(guest: Guest): Promise<void> {
   if (error || !faqs || faqs.length === 0) {
     await sendContentWithBackButton(
       guest.phone_number,
-      getStubContent('FAQs', language),
+      getMessage('error.noData', language),
       language
     );
     return;
   }
 
-  const headers: Record<UserLanguage, string> = {
-    EN: '*Frequently Asked Questions*',
-    HI: '*अक्सर पूछे जाने वाले प्रश्न*',
-    PA: '*ਅਕਸਰ ਪੁੱਛੇ ਜਾਣ ਵਾਲੇ ਸਵਾਲ*',
-  };
+  const header = getMessage('content.faq.header', language);
 
   const faqList = faqs
     .map((faq: FAQ) => {
@@ -726,7 +557,7 @@ async function sendFAQs(guest: Guest): Promise<void> {
     })
     .join('\n\n');
 
-  const content = `${headers[language]}\n\n${faqList}`;
+  const content = `${header}\n\n${faqList}`;
   setCache(cacheKey, content);
   await sendContentWithBackButton(guest.phone_number, content, language);
 }
@@ -763,7 +594,7 @@ async function sendCoordinatorContact(guest: Guest): Promise<void> {
     if (!anyContact || anyContact.length === 0) {
       await sendContentWithBackButton(
         guest.phone_number,
-        getStubContent('Emergency Contact', language),
+        getMessage('error.noData', language),
         language
       );
       return;
@@ -781,22 +612,13 @@ async function sendCoordinatorContact(guest: Guest): Promise<void> {
 }
 
 function formatContactContent(contact: CoordinatorContact, language: UserLanguage): string {
-  const headers: Record<UserLanguage, string> = {
-    EN: '*Emergency Contact*',
-    HI: '*आपातकालीन संपर्क*',
-    PA: '*ਐਮਰਜੈਂਸੀ ਸੰਪਰਕ*',
-  };
+  const header = getMessage('content.emergency.header', language);
+  const phoneLabel = getMessage('content.contact.phone', language);
 
-  const phoneLabels: Record<UserLanguage, string> = {
-    EN: 'Phone',
-    HI: 'फोन',
-    PA: 'ਫੋਨ',
-  };
-
-  let text = `${headers[language]}\n\n${contact.name}`;
+  let text = `${header}\n\n${contact.name}`;
   if (contact.role) {
     text += ` (${contact.role})`;
   }
-  text += `\n${phoneLabels[language]}: ${contact.phone_number}`;
+  text += `\n${phoneLabel}: ${contact.phone_number}`;
   return text;
 }

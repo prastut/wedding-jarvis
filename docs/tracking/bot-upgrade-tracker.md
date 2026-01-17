@@ -84,7 +84,7 @@ _PR-01 and PR-02 can run in parallel after PR-00 is validated._
 | PR    | Title                          | Parallel | Status  | Dependencies |
 | ----- | ------------------------------ | -------- | ------- | ------------ |
 | PR-03 | Language → Side → Menu Flow    | -        | ✅ Done | PR-01, PR-02 |
-| PR-04 | i18n System + All Translations | -        | Pending | PR-03        |
+| PR-04 | i18n System + All Translations | -        | ✅ Done | PR-03        |
 
 ---
 
@@ -586,7 +586,7 @@ curl -X POST http://localhost:3000/test-interactive/list?to=YOUR_PHONE
 | PR-01 | 2026-01-17 | PR-01-database-migrations.md | DB migrations + TypeScript types                 |
 | PR-02 | 2026-01-17 | PR-02-interactive-client.md  | Interactive client + constants + helpers         |
 | PR-03 | 2026-01-17 | PR-03-onboarding-flow.md     | Onboarding flow: language → side → menu          |
-| PR-04 | -          | -                            |                                                  |
+| PR-04 | 2026-01-17 | PR-04-i18n-system.md         | i18n system + EN/HI/PA translations + dress code |
 | PR-05 | -          | -                            | Parallel Group A                                 |
 | PR-06 | -          | -                            | Parallel Group A                                 |
 | PR-07 | -          | -                            | Parallel Group A                                 |

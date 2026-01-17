@@ -7,6 +7,7 @@ import { config, validateConfig } from './config';
 import webhookRouter from './routes/webhook';
 import authRouter from './routes/auth';
 import adminRouter from './routes/admin/index';
+import pagesRouter from './routes/pages';
 
 // Rate limiters
 const authLimiter = rateLimit({
@@ -84,6 +85,9 @@ app.use('/api/auth', authLimiter, authRouter);
 
 // Admin routes
 app.use('/api/admin', apiLimiter, adminRouter);
+
+// Public pages (dress code, etc.)
+app.use(pagesRouter);
 
 // Serve admin panel static files
 app.use(express.static(ADMIN_DIST));
