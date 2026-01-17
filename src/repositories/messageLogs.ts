@@ -67,11 +67,8 @@ export async function getRecentMessages(options: {
   const supabase = getSupabase();
   const { direction, since, limit = 50 } = options;
 
-  let query = supabase
-    .from('message_logs')
-    .select('*, guests!message_logs_phone_number_fkey(id, name, user_language, user_side)', {
-      count: 'exact',
-    });
+  // Fetch messages
+  let query = supabase.from('message_logs').select('*', { count: 'exact' });
 
   if (direction) {
     query = query.eq('direction', direction);
@@ -81,53 +78,51 @@ export async function getRecentMessages(options: {
     query = query.gt('created_at', since);
   }
 
-  const { data, error, count } = await query
+  const { data: messagesData, error: messagesError, count } = await query
     .order('created_at', { ascending: false })
     .limit(limit);
 
-  if (error) {
-    // Fallback if FK relationship doesn't exist - query without join
-    if (error.message.includes('relationship')) {
-      const fallbackQuery = supabase
-        .from('message_logs')
-        .select('*', { count: 'exact' });
-
-      if (direction) {
-        fallbackQuery.eq('direction', direction);
-      }
-      if (since) {
-        fallbackQuery.gt('created_at', since);
-      }
-
-      const fallbackResult = await fallbackQuery
-        .order('created_at', { ascending: false })
-        .limit(limit);
-
-      if (fallbackResult.error) {
-        throw new Error(`Failed to fetch recent messages: ${fallbackResult.error.message}`);
-      }
-
-      const messagesWithNull = (fallbackResult.data || []).map((msg) => ({
-        ...msg,
-        guest: null,
-      }));
-
-      return { messages: messagesWithNull, total: fallbackResult.count || 0 };
-    }
-    throw new Error(`Failed to fetch recent messages: ${error.message}`);
+  if (messagesError) {
+    throw new Error(`Failed to fetch recent messages: ${messagesError.message}`);
   }
 
-  const messages = (data || []).map((row) => ({
-    id: row.id,
-    phone_number: row.phone_number,
-    direction: row.direction as 'inbound' | 'outbound',
-    message_text: row.message_text,
-    raw_payload: row.raw_payload,
-    created_at: row.created_at,
-    guest: row.guests as MessageWithGuest['guest'],
+  const messages = messagesData || [];
+
+  if (messages.length === 0) {
+    return { messages: [], total: 0 };
+  }
+
+  // Get unique phone numbers and fetch guests
+  const phoneNumbers = [...new Set(messages.map((m) => m.phone_number))];
+
+  const { data: guestsData } = await supabase
+    .from('guests')
+    .select('id, phone_number, name, user_language, user_side')
+    .in('phone_number', phoneNumbers);
+
+  // Create a map for quick lookup
+  const guestMap = new Map<string, MessageWithGuest['guest']>();
+  (guestsData || []).forEach((g) => {
+    guestMap.set(g.phone_number, {
+      id: g.id,
+      name: g.name,
+      user_language: g.user_language,
+      user_side: g.user_side,
+    });
+  });
+
+  // Merge messages with guest data
+  const messagesWithGuests: MessageWithGuest[] = messages.map((msg) => ({
+    id: msg.id,
+    phone_number: msg.phone_number,
+    direction: msg.direction as 'inbound' | 'outbound',
+    message_text: msg.message_text,
+    raw_payload: msg.raw_payload,
+    created_at: msg.created_at,
+    guest: guestMap.get(msg.phone_number) || null,
   }));
 
-  return { messages, total: count || 0 };
+  return { messages: messagesWithGuests, total: count || 0 };
 }
 
 export async function getChatHistory(

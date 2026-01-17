@@ -138,16 +138,11 @@ export default function Activity() {
                 onClick={() => handleMessageClick(msg.phone_number)}
               >
                 <div className={`activity-direction ${msg.direction}`}>
-                  {msg.direction === 'inbound' ? '<-' : '->'}
+                  {msg.direction === 'inbound' ? '↑' : '↓'}
                 </div>
                 <div className="activity-content">
-                  <div className="activity-header">
-                    <span className="activity-name">{getDisplayName(msg)}</span>
-                    {msg.guest?.name && (
-                      <span className="activity-phone">{msg.phone_number}</span>
-                    )}
-                  </div>
-                  <div className="activity-message">{msg.message_text}</div>
+                  <span className="activity-name">{getDisplayName(msg)}</span>
+                  <span className="activity-message">{msg.message_text}</span>
                 </div>
                 <div className="activity-time">{formatTime(msg.created_at)}</div>
               </div>

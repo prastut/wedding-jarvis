@@ -1122,8 +1122,8 @@ button:disabled {
 .activity-item {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
+  gap: 10px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background 0.15s;
@@ -1138,13 +1138,13 @@ button:disabled {
 }
 
 .activity-direction {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 
@@ -1161,35 +1161,32 @@ button:disabled {
 .activity-content {
   flex: 1;
   min-width: 0;
-}
-
-.activity-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 4px;
 }
 
 .activity-name {
   font-weight: 500;
-  font-size: 14px;
-}
-
-.activity-phone {
   font-size: 13px;
-  color: var(--text-light);
-}
-
-.activity-message {
-  font-size: 14px;
-  color: var(--text);
+  flex-shrink: 0;
+  max-width: 150px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.activity-message {
+  font-size: 13px;
+  color: var(--text-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
 .activity-time {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-light);
   flex-shrink: 0;
 }
