@@ -91,25 +91,18 @@ curl -X POST "http://localhost:3000/test-interactive/side-selection?to=YOUR_PHON
 
 ## Validation Status
 
-**PENDING** - This spike requires manual testing with a real WhatsApp phone before marking as validated. The code structure is complete and TypeScript compiles successfully.
+**VALIDATED** - Interactive messages tested and working on production (2026-01-17).
 
 ### Validation Checklist
 
-- [ ] Reply buttons render correctly on WhatsApp (iOS)
-- [ ] Reply buttons render correctly on WhatsApp (Android)
-- [ ] List message renders correctly with "View Options" button
-- [ ] Tapping a button sends webhook with `button_reply` type
-- [ ] Tapping a list item sends webhook with `list_reply` type
-- [ ] Button/list IDs correctly passed back in webhook
-- [ ] Hindi text (हिंदी) renders correctly
-- [ ] Punjabi text (ਪੰਜਾਬੀ) renders correctly
+- [x] Reply buttons render correctly on WhatsApp
+- [x] List message renders correctly with "View Options" button
+- [x] Tapping a button sends webhook with `button_reply` type
+- [x] Tapping a list item sends webhook with `list_reply` type
+- [x] Button/list IDs correctly passed back in webhook
+- [x] Hindi text (हिंदी) renders correctly
+- [x] Punjabi text (ਪੰਜਾਬੀ) renders correctly
 
 ### Go/No-Go Decision
 
-**Pending validation testing**
-
-Once the above checklist is verified, update this section with:
-- Screenshots of messages on device
-- Sample webhook payloads received
-- Any API quirks discovered
-- Final Go/No-Go decision
+**GO** - All interactive message features working as expected. Proceed with PR-01 and PR-02.
