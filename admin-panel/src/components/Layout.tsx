@@ -1,51 +1,71 @@
+import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   async function handleLogout() {
     await logout();
     navigate('/login');
   }
 
+  function handleNavClick() {
+    setMenuOpen(false);
+  }
+
+  // Close menu on route change
+  const closeMenu = () => setMenuOpen(false);
+
   return (
     <div className="layout">
-      <nav className="sidebar">
+      {/* Mobile Header */}
+      <header className="mobile-header">
+        <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
+          {menuOpen ? '✕' : '☰'}
+        </button>
+        <h1>Shreyas & Sanjoli's Wedding Jarvis</h1>
+      </header>
+
+      {/* Overlay for mobile */}
+      {menuOpen && <div className="sidebar-overlay" onClick={closeMenu} />}
+
+      <nav className={`sidebar ${menuOpen ? 'open' : ''}`}>
         <div className="nav-header">
-          <h2>Wedding Jarvis</h2>
+          <h2>Shreyas & Sanjoli's Wedding Jarvis</h2>
           <span className="user-email">{user?.email}</span>
         </div>
 
         <ul className="nav-links">
           <li>
-            <NavLink to="/" end>Dashboard</NavLink>
+            <NavLink to="/" end onClick={handleNavClick}>Dashboard</NavLink>
           </li>
           <li>
-            <NavLink to="/activity">Live Activity</NavLink>
+            <NavLink to="/activity" onClick={handleNavClick}>Live Activity</NavLink>
           </li>
           <li>
-            <NavLink to="/guests">Guests</NavLink>
+            <NavLink to="/guests" onClick={handleNavClick}>Guests</NavLink>
           </li>
           <li>
-            <NavLink to="/broadcasts">Broadcasts</NavLink>
+            <NavLink to="/broadcasts" onClick={handleNavClick}>Broadcasts</NavLink>
           </li>
           <li className="nav-divider">Content</li>
           <li>
-            <NavLink to="/events">Events</NavLink>
+            <NavLink to="/events" onClick={handleNavClick}>Events</NavLink>
           </li>
           <li>
-            <NavLink to="/venues">Venues</NavLink>
+            <NavLink to="/venues" onClick={handleNavClick}>Venues</NavLink>
           </li>
           <li>
-            <NavLink to="/faqs">FAQs</NavLink>
+            <NavLink to="/faqs" onClick={handleNavClick}>FAQs</NavLink>
           </li>
           <li>
-            <NavLink to="/contacts">Contacts</NavLink>
+            <NavLink to="/contacts" onClick={handleNavClick}>Contacts</NavLink>
           </li>
           <li>
-            <NavLink to="/dress-code">Dress Code</NavLink>
+            <NavLink to="/dress-code" onClick={handleNavClick}>Dress Code</NavLink>
           </li>
         </ul>
 

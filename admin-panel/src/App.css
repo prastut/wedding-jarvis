@@ -19,11 +19,19 @@
   --text-light: #6b7280;
 }
 
+html, body {
+  height: 100%;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
+}
+
+#root {
+  min-height: 100%;
 }
 
 /* Loading & Errors */
@@ -1276,4 +1284,215 @@ button:disabled {
 
 .new-messages-indicator:hover {
   background: #2563eb;
+}
+
+/* ============================================
+   MOBILE RESPONSIVE STYLES
+   ============================================ */
+
+/* Mobile Header - hidden on desktop */
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  align-items: center;
+  gap: 12px;
+  z-index: 1001;
+}
+
+.mobile-header h1 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.menu-toggle {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  padding: 8px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+/* Sidebar overlay for mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+/* Mobile breakpoint */
+@media (max-width: 768px) {
+  /* Show mobile header */
+  .mobile-header {
+    display: flex;
+  }
+
+  /* Show overlay when menu is open */
+  .sidebar-overlay {
+    display: block;
+  }
+
+  /* Sidebar becomes a slide-out drawer */
+  .sidebar {
+    position: fixed;
+    left: -280px;
+    top: 0;
+    width: 280px;
+    height: 100vh;
+    height: 100dvh;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    box-shadow: none;
+    overflow-y: auto;
+  }
+
+  .sidebar.open {
+    left: 0;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Hide sidebar header on mobile - already shown in mobile header */
+  .sidebar .nav-header {
+    display: none;
+  }
+
+  /* Layout adjustments for fixed header */
+  .layout {
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+  }
+
+  /* Content area adjustments */
+  .content {
+    margin-left: 0;
+    padding: 72px 16px 16px 16px; /* top right bottom left */
+    min-height: calc(100vh - 56px);
+    min-height: calc(100dvh - 56px);
+    overflow-x: hidden;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Page header stacks on mobile */
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .page-header h1 {
+    font-size: 20px;
+  }
+
+  /* Stats grid single column on mobile */
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Filters stack vertically */
+  .filters {
+    flex-direction: column;
+  }
+
+  .filters input {
+    max-width: none;
+  }
+
+  /* Data table adjustments */
+  .data-table {
+    min-width: 600px;
+  }
+
+  /* Form actions stack */
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions button {
+    width: 100%;
+  }
+
+  /* Language tabs scroll horizontally */
+  .language-tabs {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  /* Activity page adjustments */
+  .activity-filters {
+    flex-wrap: wrap;
+  }
+
+  .activity-filters input {
+    width: 100%;
+  }
+
+  .activity-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .activity-name {
+    max-width: none;
+  }
+
+  /* Modal adjustments */
+  .modal,
+  .preview-content {
+    margin: 10px;
+    max-height: calc(100vh - 20px);
+  }
+
+  .preview-languages {
+    grid-template-columns: 1fr;
+  }
+
+  /* Chat modal full screen on mobile */
+  .chat-modal {
+    margin: 0;
+    border-radius: 0;
+    max-width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+  }
+
+  /* Guest selector adjustments */
+  .guest-item {
+    flex-wrap: wrap;
+  }
+
+  .guest-phone {
+    width: 100%;
+    margin-left: 28px;
+  }
+
+  /* Broadcast form */
+  .broadcast-form {
+    padding: 16px;
+  }
+
+  /* Content form row single column */
+  .content-form {
+    padding: 16px;
+  }
+
+  /* Login page */
+  .login-box {
+    padding: 24px;
+  }
 }
