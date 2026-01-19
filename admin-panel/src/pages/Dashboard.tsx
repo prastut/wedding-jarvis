@@ -27,11 +27,6 @@ export default function Dashboard() {
   if (error) return <div className="error">{error}</div>;
   if (!stats) return null;
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return 'Never';
-    return new Date(dateStr).toLocaleString();
-  };
-
   return (
     <div className="dashboard">
       <h1>Dashboard</h1>

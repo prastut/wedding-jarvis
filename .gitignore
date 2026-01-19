@@ -30,3 +30,6 @@ security_audit_1.md
 
 # Assets
 *.pdf
+
+# Local scripts
+*.local.js

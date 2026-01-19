@@ -11,7 +11,7 @@ import adminRouter from './routes/admin/index';
 import pagesRouter from './routes/pages';
 
 // Rate limiters
-const authLimiter = rateLimit({
+const _authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // 100 attempts per window (increased for testing)
   message: { error: 'Too many login attempts, please try again later' },
