@@ -38,10 +38,15 @@ export default function Layout() {
           <span className="user-email">{user?.email}</span>
         </div>
 
+        {/* Mobile-only Dashboard link at top of sidebar */}
+        <div className="mobile-nav-header">
+          <NavLink to="/" end onClick={handleNavClick} className="mobile-dashboard-link">
+            Dashboard
+          </NavLink>
+          <span className="user-email">{user?.email}</span>
+        </div>
+
         <ul className="nav-links">
-          <li>
-            <NavLink to="/" end onClick={handleNavClick}>Dashboard</NavLink>
-          </li>
           <li>
             <NavLink to="/activity" onClick={handleNavClick}>Live Activity</NavLink>
           </li>

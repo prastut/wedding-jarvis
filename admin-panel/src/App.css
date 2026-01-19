@@ -1332,6 +1332,11 @@ button:disabled {
   z-index: 999;
 }
 
+/* Mobile nav header - hidden on desktop */
+.mobile-nav-header {
+  display: none;
+}
+
 /* Mobile breakpoint */
 @media (max-width: 768px) {
   /* Show mobile header */
@@ -1348,10 +1353,10 @@ button:disabled {
   .sidebar {
     position: fixed;
     left: -280px;
-    top: 0;
+    top: 56px;
     width: 280px;
-    height: 100vh;
-    height: 100dvh;
+    height: calc(100vh - 56px);
+    height: calc(100dvh - 56px);
     z-index: 1000;
     transition: left 0.3s ease;
     box-shadow: none;
@@ -1366,6 +1371,33 @@ button:disabled {
   /* Hide sidebar header on mobile - already shown in mobile header */
   .sidebar .nav-header {
     display: none;
+  }
+
+  /* Show mobile nav header with Dashboard link */
+  .mobile-nav-header {
+    display: flex;
+    flex-direction: column;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .mobile-dashboard-link {
+    display: block;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--primary);
+    text-decoration: none;
+    margin-bottom: 4px;
+  }
+
+  .mobile-dashboard-link:hover {
+    color: var(--primary-dark);
+  }
+
+  .mobile-nav-header .user-email {
+    font-size: 12px;
+    color: var(--text-light);
   }
 
   /* Layout adjustments for fixed header */
