@@ -65,15 +65,18 @@ router.get('/:id', async (req: Request, res: Response) => {
 // POST /api/admin/broadcasts - Create broadcast
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { topic, message, message_hi, message_pa, template_name } = req.body;
+    const { message, message_hi, message_pa, template_name } = req.body;
 
-    if (!topic || !message) {
-      res.status(400).json({ error: 'Topic and message are required' });
+    if (!message) {
+      res.status(400).json({ error: 'Message is required' });
       return;
     }
 
     const supabase = getSupabase();
     const idempotencyKey = uuidv4();
+
+    // Auto-generate topic from message (first 50 chars)
+    const topic = message.slice(0, 50) + (message.length > 50 ? '…' : '');
 
     const { data: broadcast, error } = await supabase
       .from('broadcasts')
@@ -102,7 +105,7 @@ router.post('/', async (req: Request, res: Response) => {
 router.patch('/:id', async (req: Request, res: Response) => {
   try {
     const supabase = getSupabase();
-    const { topic, message, message_hi, message_pa, template_name } = req.body;
+    const { message, message_hi, message_pa, template_name } = req.body;
 
     // Check broadcast exists and is in draft status
     const { data: existing } = await supabase
@@ -122,8 +125,11 @@ router.patch('/:id', async (req: Request, res: Response) => {
     }
 
     const updates: Partial<Broadcast> = {};
-    if (topic !== undefined) updates.topic = topic;
-    if (message !== undefined) updates.message = message;
+    if (message !== undefined) {
+      updates.message = message;
+      // Auto-generate topic from message
+      updates.topic = message.slice(0, 50) + (message.length > 50 ? '…' : '');
+    }
     if (message_hi !== undefined) updates.message_hi = message_hi || null;
     if (message_pa !== undefined) updates.message_pa = message_pa || null;
     if (template_name !== undefined) updates.template_name = template_name;

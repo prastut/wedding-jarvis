@@ -38,6 +38,9 @@ export const messages = {
   'menu.items.venue.title': 'Venue & Directions',
   'menu.items.venue.description': 'Get venue details & maps',
 
+  'menu.items.dresscode.title': 'Dress Code',
+  'menu.items.dresscode.description': 'View event color palettes',
+
   'menu.items.travel.title': 'Travel & Stay',
   'menu.items.travel.description': 'Travel and accommodation info',
 

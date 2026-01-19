@@ -91,7 +91,6 @@ export interface Guest {
 
 export interface Broadcast {
   id: string;
-  topic: string;
   message: string;
   message_hi: string | null;
   message_pa: string | null;
@@ -103,7 +102,6 @@ export interface Broadcast {
 }
 
 export interface BroadcastFormData {
-  topic: string;
   message: string;
   message_hi?: string;
   message_pa?: string;

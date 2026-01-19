@@ -40,6 +40,9 @@ export const messages: Record<MessageKey, string> = {
   'menu.items.venue.title': 'स्थान और दिशा',
   'menu.items.venue.description': 'स्थान विवरण और नक्शा प्राप्त करें',
 
+  'menu.items.dresscode.title': 'ड्रेस कोड',
+  'menu.items.dresscode.description': 'कार्यक्रम के रंग देखें',
+
   'menu.items.travel.title': 'यात्रा और ठहराव',
   'menu.items.travel.description': 'यात्रा और आवास जानकारी',
 

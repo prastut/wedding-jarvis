@@ -16,7 +16,6 @@ export default function Broadcasts() {
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState<BroadcastFormData>({
-    topic: '',
     message: '',
     message_hi: '',
     message_pa: '',
@@ -86,7 +85,7 @@ export default function Broadcasts() {
         await adminApi.createBroadcast(formData);
       }
       setShowForm(false);
-      setFormData({ topic: '', message: '', message_hi: '', message_pa: '' });
+      setFormData({ message: '', message_hi: '', message_pa: '' });
       setEditingId(null);
       setActiveTab('en');
       loadBroadcasts();
@@ -198,7 +197,6 @@ export default function Broadcasts() {
 
   function startEdit(broadcast: Broadcast) {
     setFormData({
-      topic: broadcast.topic,
       message: broadcast.message,
       message_hi: broadcast.message_hi || '',
       message_pa: broadcast.message_pa || '',
@@ -209,7 +207,7 @@ export default function Broadcasts() {
   }
 
   function cancelEdit() {
-    setFormData({ topic: '', message: '', message_hi: '', message_pa: '' });
+    setFormData({ message: '', message_hi: '', message_pa: '' });
     setEditingId(null);
     setActiveTab('en');
     setShowForm(false);
@@ -248,6 +246,8 @@ export default function Broadcasts() {
   }
 
   const formatDate = (dateStr: string) => new Date(dateStr).toLocaleString();
+  const truncate = (text: string, len: number) =>
+    text.length > len ? text.slice(0, len) + '…' : text;
 
   const statusColors: Record<string, string> = {
     draft: 'badge-secondary',
@@ -276,17 +276,6 @@ export default function Broadcasts() {
         <div className="broadcast-form">
           <h2>{editingId ? 'Edit Broadcast' : 'New Broadcast'}</h2>
           <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label>Topic</label>
-              <input
-                type="text"
-                value={formData.topic}
-                onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
-                placeholder="e.g., Venue Update"
-                required
-              />
-            </div>
-
             <div className="form-group">
               <label>Message</label>
               <p className="form-hint">
@@ -346,7 +335,7 @@ export default function Broadcasts() {
       {previewBroadcast && (
         <div className="preview-modal" onClick={() => setPreviewBroadcast(null)}>
           <div className="preview-content" onClick={(e) => e.stopPropagation()}>
-            <h3>Preview: {previewBroadcast.topic}</h3>
+            <h3>Preview: {truncate(previewBroadcast.message, 40)}</h3>
             <div className="preview-languages">
               <div className="preview-language">
                 <h4>English</h4>
@@ -372,7 +361,6 @@ export default function Broadcasts() {
       <table className="data-table">
         <thead>
           <tr>
-            <th>Topic</th>
             <th>Message</th>
             <th>Languages</th>
             <th>Status</th>
@@ -384,7 +372,6 @@ export default function Broadcasts() {
         <tbody>
           {broadcasts.map((broadcast) => (
             <tr key={broadcast.id}>
-              <td>{broadcast.topic}</td>
               <td className="message-cell">{broadcast.message}</td>
               <td>
                 <span className="badge badge-info">{getLanguageStatus(broadcast)}</span>
@@ -422,7 +409,7 @@ export default function Broadcasts() {
           ))}
           {broadcasts.length === 0 && (
             <tr>
-              <td colSpan={7} className="empty">
+              <td colSpan={6} className="empty">
                 No broadcasts yet
               </td>
             </tr>
@@ -435,7 +422,7 @@ export default function Broadcasts() {
       {showGuestSelector && guestSelectorBroadcast && (
         <div className="modal-overlay" onClick={() => setShowGuestSelector(false)}>
           <div className="modal guest-selector-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Send: {guestSelectorBroadcast.topic}</h3>
+            <h3>Send: {truncate(guestSelectorBroadcast.message, 40)}</h3>
 
             <div className="selection-mode">
               <label>

@@ -84,6 +84,7 @@ export function extractSide(id: string): UserSide | null {
 export const MENU_IDS = {
   SCHEDULE: 'menu_schedule',
   VENUE: 'menu_venue',
+  DRESSCODE: 'menu_dresscode',
   TRAVEL: 'menu_travel',
   RSVP: 'menu_rsvp',
   EMERGENCY: 'menu_emergency',

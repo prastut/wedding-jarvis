@@ -263,6 +263,10 @@ async function handleMenuSelection(guest: Guest, menuId: string): Promise<string
       await sendVenuesAndDirections(guest);
       return null;
 
+    case MENU_IDS.DRESSCODE:
+      await sendDressCode(guest);
+      return null;
+
     case MENU_IDS.TRAVEL:
       await sendContentWithBackButton(
         guest.phone_number,
@@ -904,5 +908,19 @@ async function sendGiftRegistry(guest: Guest): Promise<void> {
   const language = guest.user_language || 'EN';
   const giftsLink = getGiftsPageUrl(language);
   const content = getMessageWithValues('gifts.info', language, { giftsLink });
+  await sendContentWithBackButton(guest.phone_number, content, language);
+}
+
+/**
+ * Get the dress code page URL
+ */
+function getDressCodePageUrl(): string {
+  return `${config.publicUrl}/dress-code`;
+}
+
+async function sendDressCode(guest: Guest): Promise<void> {
+  const language = guest.user_language || 'EN';
+  const dressCodeLink = getDressCodePageUrl();
+  const content = `*${getMessage('menu.items.dresscode.title', language)}*\n\n${getMessage('menu.items.dresscode.description', language)}:\n\n${dressCodeLink}`;
   await sendContentWithBackButton(guest.phone_number, content, language);
 }

@@ -143,6 +143,11 @@ export function getMenuItems(language: UserLanguage): MenuItem[] {
       description: getMessage('menu.items.venue.description', language),
     },
     {
+      id: 'menu_dresscode',
+      title: getMessage('menu.items.dresscode.title', language),
+      description: getMessage('menu.items.dresscode.description', language),
+    },
+    {
       id: 'menu_travel',
       title: getMessage('menu.items.travel.title', language),
       description: getMessage('menu.items.travel.description', language),
