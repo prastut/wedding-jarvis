@@ -23,7 +23,6 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/dress-code" element={<DressCode />} />
       <Route
         path="/login"
         element={user ? <Navigate to="/" replace /> : <Login />}
@@ -44,6 +43,7 @@ function AppRoutes() {
         <Route path="venues" element={<Venues />} />
         <Route path="faqs" element={<FAQs />} />
         <Route path="contacts" element={<Contacts />} />
+        <Route path="dress-code" element={<DressCode />} />
       </Route>
     </Routes>
   );

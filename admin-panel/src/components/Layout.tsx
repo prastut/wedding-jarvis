@@ -44,6 +44,9 @@ export default function Layout() {
           <li>
             <NavLink to="/contacts">Contacts</NavLink>
           </li>
+          <li>
+            <NavLink to="/dress-code">Dress Code</NavLink>
+          </li>
         </ul>
 
         <button onClick={handleLogout} className="logout-btn">
