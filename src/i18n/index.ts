@@ -133,6 +133,11 @@ export interface MenuItem {
 export function getMenuItems(language: UserLanguage): MenuItem[] {
   return [
     {
+      id: 'menu_rsvp',
+      title: getMessage('menu.items.rsvp.title', language),
+      description: getMessage('menu.items.rsvp.description', language),
+    },
+    {
       id: 'menu_schedule',
       title: getMessage('menu.items.schedule.title', language),
       description: getMessage('menu.items.schedule.description', language),
@@ -153,19 +158,14 @@ export function getMenuItems(language: UserLanguage): MenuItem[] {
       description: getMessage('menu.items.travel.description', language),
     },
     {
-      id: 'menu_rsvp',
-      title: getMessage('menu.items.rsvp.title', language),
-      description: getMessage('menu.items.rsvp.description', language),
+      id: 'menu_faq',
+      title: getMessage('menu.items.faq.title', language),
+      description: getMessage('menu.items.faq.description', language),
     },
     {
       id: 'menu_emergency',
       title: getMessage('menu.items.emergency.title', language),
       description: getMessage('menu.items.emergency.description', language),
-    },
-    {
-      id: 'menu_faq',
-      title: getMessage('menu.items.faq.title', language),
-      description: getMessage('menu.items.faq.description', language),
     },
     {
       id: 'menu_gifts',
