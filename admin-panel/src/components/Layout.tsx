@@ -59,7 +59,7 @@ export default function Layout() {
           <li>
             <NavLink to="/broadcasts" onClick={handleNavClick}>Broadcasts</NavLink>
           </li>
-          <li className="nav-divider">Content</li>
+          <li className="nav-divider">Edit Content</li>
           <li>
             <NavLink to="/events" onClick={handleNavClick}>Events</NavLink>
           </li>
