@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { adminApi } from '../api/client';
 import type { Stats } from '../api/client';
 
@@ -35,103 +36,47 @@ export default function Dashboard() {
     <div className="dashboard">
       <h1>Dashboard</h1>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <h3>Guests</h3>
-          <div className="stat-value">{stats.guests.total}</div>
-          <div className="stat-detail">
-            <span className="positive">{stats.guests.optedIn} opted in</span>
-            <span className="negative">{stats.guests.optedOut} opted out</span>
+      {/* Overview - The numbers that matter */}
+      <section className="dashboard-section">
+        <h2>Overview</h2>
+        <div className="stats-grid">
+          <div className="stat-card">
+            <h3>Guests Onboarded</h3>
+            <div className="stat-value">{stats.guests.optedIn}</div>
+            <div className="stat-subtitle">{stats.guests.onboarded} guests basic settings done</div>
           </div>
-        </div>
 
-        <div className="stat-card">
-          <h3>Onboarded</h3>
-          <div className="stat-value">{stats.guests.onboardedPercent}%</div>
-          <div className="stat-detail">
-            <span>{stats.guests.onboarded} of {stats.guests.total} guests</span>
-          </div>
-        </div>
-
-        <div className="stat-card highlight">
-          <h3>RSVP Status</h3>
-          <div className="stat-value">{stats.rsvp.attending}</div>
-          <div className="stat-subtitle">attending</div>
-          <div className="stat-detail">
-            <span className="positive">{stats.rsvp.attending} yes</span>
-            <span className="negative">{stats.rsvp.notAttending} no</span>
-            <span className="neutral">{stats.rsvp.pending} pending</span>
-          </div>
-        </div>
-
-        <div className="stat-card highlight">
-          <h3>Total Headcount</h3>
-          <div className="stat-value">{stats.rsvp.totalHeadcount}</div>
-          <div className="stat-subtitle">confirmed guests</div>
-        </div>
-
-        <div className="stat-card">
-          <h3>By Side</h3>
-          <div className="stat-breakdown">
-            <div className="breakdown-row">
-              <span className="label">Groom</span>
-              <span className="value">{stats.bySide.groom}</span>
-            </div>
-            <div className="breakdown-row">
-              <span className="label">Bride</span>
-              <span className="value">{stats.bySide.bride}</span>
-            </div>
-            <div className="breakdown-row muted">
-              <span className="label">Not Onboarded</span>
-              <span className="value">{stats.bySide.notOnboarded}</span>
+          <div className="stat-card highlight">
+            <h3>RSVP Status</h3>
+            <div className="stat-value">{stats.rsvp.attending}</div>
+            <div className="stat-subtitle">attending</div>
+            <div className="stat-detail">
+              <Link to="/guests?rsvp=YES" className="positive">{stats.rsvp.attending} yes</Link>
+              <Link to="/guests?rsvp=NO" className="negative">{stats.rsvp.notAttending} no</Link>
+              <Link to="/guests?rsvp=pending" className="neutral">{stats.rsvp.pending} pending</Link>
+              <span>{stats.rsvp.totalHeadcount} headcount</span>
             </div>
           </div>
         </div>
+      </section>
 
-        <div className="stat-card">
-          <h3>By Language</h3>
-          <div className="stat-breakdown">
-            <div className="breakdown-row">
-              <span className="label">English</span>
-              <span className="value">{stats.byLanguage.english}</span>
-            </div>
-            <div className="breakdown-row">
-              <span className="label">Hindi</span>
-              <span className="value">{stats.byLanguage.hindi}</span>
-            </div>
-            <div className="breakdown-row">
-              <span className="label">Punjabi</span>
-              <span className="value">{stats.byLanguage.punjabi}</span>
-            </div>
-            <div className="breakdown-row muted">
-              <span className="label">Not Set</span>
-              <span className="value">{stats.byLanguage.notSet}</span>
-            </div>
-          </div>
-        </div>
+      {/* Detailed - By Side breakdown */}
+      <section className="dashboard-section">
+        <h2>By Side</h2>
+        <div className="stats-grid">
+          <Link to="/guests?side=GROOM" className="stat-card stat-card-link">
+            <h3>Groom's Side</h3>
+            <div className="stat-value">{stats.bySide.groom}</div>
+            <div className="stat-subtitle">guests onboarded</div>
+          </Link>
 
-        <div className="stat-card">
-          <h3>Messages</h3>
-          <div className="stat-value">{stats.messages.total}</div>
-          <div className="stat-detail">
-            <span>{stats.messages.inbound} inbound</span>
-            <span>{stats.messages.outbound} outbound</span>
-          </div>
+          <Link to="/guests?side=BRIDE" className="stat-card stat-card-link">
+            <h3>Bride's Side</h3>
+            <div className="stat-value">{stats.bySide.bride}</div>
+            <div className="stat-subtitle">guests onboarded</div>
+          </Link>
         </div>
-
-        <div className="stat-card">
-          <h3>Broadcasts</h3>
-          <div className="stat-value">{stats.broadcasts.total}</div>
-          <div className="stat-detail">
-            <span>{stats.broadcasts.completed} completed</span>
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <h3>Last Activity</h3>
-          <div className="stat-value small">{formatDate(stats.lastActivity)}</div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

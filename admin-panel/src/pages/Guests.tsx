@@ -1,20 +1,36 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { adminApi } from '../api/client';
 import type { Guest, Pagination, UserLanguage, UserSide, GuestFilters } from '../api/client';
 
 export default function Guests() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [guests, setGuests] = useState<Guest[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
 
-  // Filters
-  const [optedInFilter, setOptedInFilter] = useState<string>('all');
-  const [languageFilter, setLanguageFilter] = useState<string>('all');
-  const [sideFilter, setSideFilter] = useState<string>('all');
-  const [rsvpFilter, setRsvpFilter] = useState<string>('all');
+  // Initialize state from URL params
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
+
+  // Filters from URL
+  const [optedInFilter, setOptedInFilter] = useState<string>(searchParams.get('opted_in') || 'all');
+  const [languageFilter, setLanguageFilter] = useState<string>(searchParams.get('language') || 'all');
+  const [sideFilter, setSideFilter] = useState<string>(searchParams.get('side') || 'all');
+  const [rsvpFilter, setRsvpFilter] = useState<string>(searchParams.get('rsvp') || 'all');
+
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (page > 1) params.set('page', String(page));
+    if (optedInFilter !== 'all') params.set('opted_in', optedInFilter);
+    if (languageFilter !== 'all') params.set('language', languageFilter);
+    if (sideFilter !== 'all') params.set('side', sideFilter);
+    if (rsvpFilter !== 'all') params.set('rsvp', rsvpFilter);
+    setSearchParams(params, { replace: true });
+  }, [search, page, optedInFilter, languageFilter, sideFilter, rsvpFilter, setSearchParams]);
 
   const loadGuests = useCallback(async () => {
     setLoading(true);

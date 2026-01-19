@@ -47,6 +47,9 @@ export default function Layout() {
         </div>
 
         <ul className="nav-links">
+          <li className="desktop-only">
+            <NavLink to="/" end onClick={handleNavClick}>Dashboard</NavLink>
+          </li>
           <li>
             <NavLink to="/activity" onClick={handleNavClick}>Live Activity</NavLink>
           </li>
