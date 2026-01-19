@@ -1,81 +1,110 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { adminApi } from '../api/client';
+import type { Event } from '../api/client';
+
 export default function DressCode() {
-  const events = [
-    {
-      name: 'Sangeet / Cocktail Night',
-      date: '19th February 2026',
-      colors: [
-        { name: 'Dusty Rose', hex: '#C27489' },
-        { name: 'Pink', hex: '#D8A1AD' },
-        { name: 'Blush', hex: '#F2D4DA' },
-        { name: 'Forest Green', hex: '#3D5E4C' },
-        { name: 'Sage', hex: '#7BA68B' },
-        { name: 'Mint', hex: '#8FB996' },
-      ],
-    },
-    {
-      name: 'Haldi',
-      date: '20th February 2026',
-      colors: [
-        { name: 'Golden Yellow', hex: '#F5C518' },
-        { name: 'Cream', hex: '#FFF8DC' },
-        { name: 'Orange', hex: '#E8923A' },
-        { name: 'Light Yellow', hex: '#F7DC6F' },
-        { name: 'Ivory', hex: '#FFFEF0' },
-        { name: 'Mint Green', hex: '#7ED17E' },
-      ],
-    },
-    {
-      name: 'Wedding',
-      date: '21st February 2026',
-      colors: [
-        { name: 'Peach', hex: '#E5A088' },
-        { name: 'Terracotta', hex: '#B5654A' },
-        { name: 'Deep Teal', hex: '#1D4650' },
-        { name: 'Light Peach', hex: '#F2C4B3' },
-        { name: 'Gold', hex: '#D4A84B' },
-        { name: 'Sky Blue', hex: '#5EB4C9' },
-        { name: 'Ivory', hex: '#FDF8F0' },
-        { name: 'Beige', hex: '#E8D4B8' },
-        { name: 'Light Blue', hex: '#E8F4F8' },
-        { name: 'Teal', hex: '#7EC8C8' },
-        { name: 'Cream', hex: '#FFF8E7' },
-        { name: 'Ice Blue', hex: '#EDF8FC' },
-      ],
-    },
-  ];
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  async function loadEvents() {
+    try {
+      const { events } = await adminApi.getEvents();
+      // Filter to only events with dress codes and sort by sort_order
+      const eventsWithDressCode = events
+        .filter((e) => e.dress_code)
+        .sort((a, b) => a.sort_order - b.sort_order);
+      setEvents(eventsWithDressCode);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load events');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  if (loading) return <div className="loading">Loading...</div>;
 
   return (
     <div className="dress-code-page">
-      <div className="dress-code-header">
+      <div className="page-header">
         <h1>Dress Code</h1>
-        <p>Please refer to the suggested color palettes for each event</p>
+        <p className="page-subtitle">
+          This is what guests see when they tap "Dress Code" in the bot.
+          <br />
+          Edit dress codes in the <Link to="/events">Events</Link> page.
+        </p>
       </div>
 
-      <div className="events-container">
-        {events.map((event) => (
-          <div key={event.name} className="event-card">
-            <div className="event-info">
-              <h2>{event.name}</h2>
-              <span className="event-date">{event.date}</span>
-            </div>
-            <div className="color-palette">
-              {event.colors.map((color) => (
-                <div key={color.hex} className="color-swatch">
-                  <div
-                    className="color-box"
-                    style={{ backgroundColor: color.hex }}
-                  />
-                  <span className="color-name">{color.name}</span>
-                </div>
-              ))}
-            </div>
+      {error && <div className="error">{error}</div>}
+
+      {events.length === 0 ? (
+        <div className="empty-state">
+          <p>No dress codes configured yet.</p>
+          <p>
+            Add dress codes to your events in the <Link to="/events">Events</Link> page.
+          </p>
+        </div>
+      ) : (
+        <div className="dress-code-preview">
+          <div className="preview-header">
+            <h2>Guest Preview</h2>
+            <span className="preview-badge">What guests see at /dress-code</span>
           </div>
-        ))}
-      </div>
 
-      <div className="dress-code-footer">
-        <p>We can't wait to celebrate with you!</p>
-      </div>
+          <div className="events-list">
+            {events.map((event) => (
+              <div key={event.id} className="event-dress-code-card">
+                <div className="event-header">
+                  <div className="event-name">
+                    <h3>{event.name}</h3>
+                    {event.name_hi && <span className="translation">{event.name_hi}</span>}
+                    {event.name_pa && <span className="translation">{event.name_pa}</span>}
+                  </div>
+                  <span className="event-date">{formatDate(event.start_time)}</span>
+                </div>
+
+                <div className="dress-code-content">
+                  <div className="language-row">
+                    <span className="lang-label">EN</span>
+                    <span className="dress-code-text">{event.dress_code}</span>
+                  </div>
+                  {event.dress_code_hi && (
+                    <div className="language-row">
+                      <span className="lang-label">HI</span>
+                      <span className="dress-code-text">{event.dress_code_hi}</span>
+                    </div>
+                  )}
+                  {event.dress_code_pa && (
+                    <div className="language-row">
+                      <span className="lang-label">PA</span>
+                      <span className="dress-code-text">{event.dress_code_pa}</span>
+                    </div>
+                  )}
+                </div>
+
+                <Link to="/events" className="edit-link">
+                  Edit in Events →
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
