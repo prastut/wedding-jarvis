@@ -28,6 +28,11 @@ We're adding a **gift wishlist** to the wedding app. Guests can see what gifts t
 ### Browsing & Claiming
 - Guests see a list of gifts with name, description, price (if shown), and image (if added)
 - Each gift has a "Claim" button
+- **Claim Confirmation:** To prevent impulsive claiming, guests must type a confirmation phrase before claiming
+  - UI shows: `Type this to confirm: I bought [FirstWord]` (e.g., "I bought KitchenAid")
+  - Uses only the first word of the item name for easier mobile typing
+  - Case-insensitive matching
+  - Claim button stays disabled until exact phrase is entered
 - Once claimed, the item shows as "taken" to other guests (but they don't see WHO claimed it)
 - Guest can **unclaim** anytime if they change their mind
 - Some items may have a link to where to buy it (Amazon, etc.)
@@ -73,6 +78,7 @@ We're adding a **gift wishlist** to the wedding app. Guests can see what gifts t
 | How is cash handled? | **Just show UPI address** - no tracking |
 | How do admins know about claims? | **Check the admin panel** - no notifications |
 | What languages? | **All 3** - English, Hindi, Punjabi (matches rest of app) |
+| How to prevent impulsive claims? | **Type-to-confirm** - guest types "I bought [FirstWord]" before claiming |
 
 ---
 

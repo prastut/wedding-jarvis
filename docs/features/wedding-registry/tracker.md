@@ -154,6 +154,7 @@ After completing a PR, generate `docs/features/wedding-registry/reports/PR-{numb
 | PR | Title | Status | Dependencies | Est. Scope |
 |----|-------|--------|--------------|------------|
 | PR-13 | Seed Mock Registry Items | Complete | PR-03 | Small |
+| PR-14 | Claim Confirmation Flow | Complete | PR-10 | Small |
 
 ---
 
@@ -757,6 +758,59 @@ async function sendGiftRegistry(guest: Guest) {
 
 ---
 
+### PR-14: Claim Confirmation Flow
+
+**Goal:** Add type-to-confirm friction before claiming to prevent impulsive claims
+
+**Scope:**
+- Add confirmation modal/dialog when claiming an item
+- User must type "I bought [FirstWord]" to enable the claim button
+- Case-insensitive matching
+- First word of item name only (for mobile-friendly typing)
+
+**UI Flow:**
+1. User taps "Claim This Gift" button
+2. Modal appears with:
+   - Item name displayed
+   - Instruction: "Type this to confirm:"
+   - Target phrase: "I bought [FirstWord]" (e.g., "I bought KitchenAid")
+   - Text input field
+   - "Confirm Claim" button (disabled until match)
+   - Cancel/close option
+3. User types the phrase
+4. Button enables when input matches (case-insensitive)
+5. User taps confirm → claim is created
+
+**Implementation Details:**
+```typescript
+// Extract first word from item name
+const getFirstWord = (name: string): string => {
+  return name.split(' ')[0];
+};
+
+// Check if input matches required phrase
+const isConfirmationValid = (input: string, itemName: string): boolean => {
+  const expected = `I bought ${getFirstWord(itemName)}`;
+  return input.toLowerCase().trim() === expected.toLowerCase();
+};
+```
+
+**Files to Modify:**
+- `admin-panel/src/pages/Wishlist.tsx`
+- `admin-panel/src/pages/Wishlist.css`
+
+**Acceptance Criteria:**
+- [ ] Claim button opens confirmation modal
+- [ ] Modal shows correct target phrase with first word of item
+- [ ] Confirm button disabled until exact phrase typed
+- [ ] Matching is case-insensitive
+- [ ] Can cancel/close modal without claiming
+- [ ] Successful confirmation triggers claim API call
+- [ ] Modal closes after successful claim
+- [ ] Works on mobile (responsive)
+
+---
+
 ## Completion Log
 
 | PR | Completed | Report File |
@@ -774,6 +828,7 @@ async function sendGiftRegistry(guest: Guest) {
 | PR-11 | 2026-01-22 | [PR-11-upi-display-section.md](reports/PR-11-upi-display-section.md) |
 | PR-12 | 2026-01-22 | [PR-12-bot-personalized-link.md](reports/PR-12-bot-personalized-link.md) |
 | PR-13 | 2026-01-22 | [PR-13-seed-mock-registry-items.md](reports/PR-13-seed-mock-registry-items.md) |
+| PR-14 | 2026-01-22 | [PR-14-claim-confirmation-flow.md](reports/PR-14-claim-confirmation-flow.md) |
 
 ---
 
@@ -806,8 +861,8 @@ admin-panel/src/
 ├── pages/
 │   ├── Registry.tsx                # PR-06 (new)
 │   ├── Registry.css                # PR-06 (new)
-│   ├── Wishlist.tsx                # PR-09 (new)
-│   └── Wishlist.css                # PR-09 (new)
+│   ├── Wishlist.tsx                # PR-09 (new), PR-14 (modified)
+│   └── Wishlist.css                # PR-09 (new), PR-14 (modified)
 ├── components/
 │   └── Sidebar.tsx                 # PR-06 (modified)
 └── App.tsx                         # PR-06, PR-09 (modified)

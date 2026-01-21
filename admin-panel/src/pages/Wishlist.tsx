@@ -21,6 +21,10 @@ const translations = {
     errorTitle: 'Unable to load wishlist',
     registryClosed: 'The gift registry is currently closed. Please check back later.',
     phoneRequired: 'Please use the link sent to you via WhatsApp to access the wishlist.',
+    confirmClaimTitle: 'Claim',
+    confirmClaimInstruction: 'Type this to confirm:',
+    confirmClaimButton: 'Confirm Claim',
+    cancel: 'Cancel',
   },
   HI: {
     title: 'शादी की विशलिस्ट',
@@ -37,6 +41,10 @@ const translations = {
     errorTitle: 'विशलिस्ट लोड नहीं हो सकी',
     registryClosed: 'गिफ्ट रजिस्ट्री अभी बंद है। कृपया बाद में पुनः प्रयास करें।',
     phoneRequired: 'विशलिस्ट तक पहुँचने के लिए कृपया व्हाट्सएप पर भेजे गए लिंक का उपयोग करें।',
+    confirmClaimTitle: 'चुनें',
+    confirmClaimInstruction: 'पुष्टि करने के लिए यह टाइप करें:',
+    confirmClaimButton: 'पुष्टि करें',
+    cancel: 'रद्द करें',
   },
   PA: {
     title: 'ਵਿਆਹ ਦੀ ਵਿਸ਼ਲਿਸਟ',
@@ -53,6 +61,10 @@ const translations = {
     errorTitle: 'ਵਿਸ਼ਲਿਸਟ ਲੋਡ ਨਹੀਂ ਹੋ ਸਕੀ',
     registryClosed: 'ਗਿਫਟ ਰਜਿਸਟਰੀ ਇਸ ਸਮੇਂ ਬੰਦ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਬਾਅਦ ਵਿੱਚ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।',
     phoneRequired: 'ਵਿਸ਼ਲਿਸਟ ਤੱਕ ਪਹੁੰਚਣ ਲਈ ਕਿਰਪਾ ਕਰਕੇ ਵਟਸਐਪ ਰਾਹੀਂ ਭੇਜੇ ਲਿੰਕ ਦੀ ਵਰਤੋਂ ਕਰੋ।',
+    confirmClaimTitle: 'ਚੁਣੋ',
+    confirmClaimInstruction: 'ਪੁਸ਼ਟੀ ਕਰਨ ਲਈ ਇਹ ਟਾਈਪ ਕਰੋ:',
+    confirmClaimButton: 'ਪੁਸ਼ਟੀ ਕਰੋ',
+    cancel: 'ਰੱਦ ਕਰੋ',
   },
 };
 
@@ -82,6 +94,10 @@ export default function Wishlist() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [claimingItemId, setClaimingItemId] = useState<string | null>(null);
+
+  // Claim confirmation modal state
+  const [confirmingItem, setConfirmingItem] = useState<GuestRegistryItem | null>(null);
+  const [confirmationInput, setConfirmationInput] = useState('');
 
   const language: Language = guest?.language || 'EN';
   const t = translations[language];
@@ -123,9 +139,40 @@ export default function Wishlist() {
     loadData();
   }, [loadData]);
 
-  async function handleClaim(itemId: string) {
-    if (!phone || claimingItemId) return;
+  // Get first word of item name (English) for confirmation phrase
+  const getFirstWord = (name: string): string => {
+    return name.split(' ')[0];
+  };
 
+  // Get the required confirmation phrase for an item
+  const getConfirmationPhrase = (itemName: string): string => {
+    return `I bought ${getFirstWord(itemName)}`;
+  };
+
+  // Check if input matches required phrase (case-insensitive)
+  const isConfirmationValid = (input: string, itemName: string): boolean => {
+    const expected = getConfirmationPhrase(itemName);
+    return input.toLowerCase().trim() === expected.toLowerCase();
+  };
+
+  // Open confirmation modal for an item
+  function openClaimConfirmation(item: GuestRegistryItem) {
+    setConfirmingItem(item);
+    setConfirmationInput('');
+  }
+
+  // Close confirmation modal
+  function closeClaimConfirmation() {
+    setConfirmingItem(null);
+    setConfirmationInput('');
+  }
+
+  // Execute the actual claim after confirmation
+  async function executeClaimAfterConfirmation() {
+    if (!phone || claimingItemId || !confirmingItem) return;
+
+    const itemId = confirmingItem.id;
+    closeClaimConfirmation();
     setClaimingItemId(itemId);
 
     // Optimistic update
@@ -285,7 +332,7 @@ export default function Wishlist() {
                     ) : (
                       <button
                         className="btn-claim"
-                        onClick={() => handleClaim(item.id)}
+                        onClick={() => openClaimConfirmation(item)}
                         disabled={claimingItemId === item.id}
                       >
                         {claimingItemId === item.id ? '...' : t.claimButton}
@@ -385,6 +432,45 @@ export default function Wishlist() {
               : 'Thank you for your love and blessings'}
         </p>
       </footer>
+
+      {/* Claim Confirmation Modal */}
+      {confirmingItem && (
+        <div className="claim-modal-overlay" onClick={closeClaimConfirmation}>
+          <div className="claim-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>
+              {t.confirmClaimTitle} "{getLocalizedText(confirmingItem, 'name', language)}"
+            </h3>
+
+            <p className="claim-modal-instruction">{t.confirmClaimInstruction}</p>
+
+            <div className="claim-modal-phrase">
+              <code>{getConfirmationPhrase(confirmingItem.name)}</code>
+            </div>
+
+            <input
+              type="text"
+              className="claim-modal-input"
+              value={confirmationInput}
+              onChange={(e) => setConfirmationInput(e.target.value)}
+              placeholder={getConfirmationPhrase(confirmingItem.name)}
+              autoFocus
+            />
+
+            <div className="claim-modal-actions">
+              <button className="btn-modal-cancel" onClick={closeClaimConfirmation}>
+                {t.cancel}
+              </button>
+              <button
+                className="btn-modal-confirm"
+                onClick={executeClaimAfterConfirmation}
+                disabled={!isConfirmationValid(confirmationInput, confirmingItem.name)}
+              >
+                {t.confirmClaimButton}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
