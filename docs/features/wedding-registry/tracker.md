@@ -140,20 +140,20 @@ After completing a PR, generate `docs/features/wedding-registry/reports/PR-{numb
 | PR | Title | Status | Dependencies | Est. Scope |
 |----|-------|--------|--------------|------------|
 | PR-09 | Guest Wishlist Page | Complete | PR-04 | Large |
-| PR-10 | Claim/Unclaim Flow | Not Started | PR-09 | Medium |
-| PR-11 | UPI Display Section | Not Started | PR-09 | Small |
+| PR-10 | Claim/Unclaim Flow | Complete | PR-09 | Medium |
+| PR-11 | UPI Display Section | Complete | PR-09 | Small |
 
 ### Phase 4: Bot Integration
 
 | PR | Title | Status | Dependencies | Est. Scope |
 |----|-------|--------|--------------|------------|
-| PR-12 | Bot Personalized Link | Not Started | PR-09 | Small |
+| PR-12 | Bot Personalized Link | Complete | PR-09 | Small |
 
 ### Phase 5: Seed Data & Polish
 
 | PR | Title | Status | Dependencies | Est. Scope |
 |----|-------|--------|--------------|------------|
-| PR-13 | Seed Mock Registry Items | Not Started | PR-03 | Small |
+| PR-13 | Seed Mock Registry Items | Complete | PR-03 | Small |
 
 ---
 
@@ -770,10 +770,10 @@ async function sendGiftRegistry(guest: Guest) {
 | PR-07 | 2026-01-22 | [PR-07-registry-claims-page.md](reports/PR-07-registry-claims-page.md) |
 | PR-08 | 2026-01-22 | [PR-08-csv-import-feature.md](reports/PR-08-csv-import-feature.md) |
 | PR-09 | 2026-01-22 | [PR-09-guest-wishlist-page.md](reports/PR-09-guest-wishlist-page.md) |
-| PR-10 | - | - |
-| PR-11 | - | - |
-| PR-12 | - | - |
-| PR-13 | - | - |
+| PR-10 | 2026-01-22 | [PR-10-claim-unclaim-flow.md](reports/PR-10-claim-unclaim-flow.md) |
+| PR-11 | 2026-01-22 | [PR-11-upi-display-section.md](reports/PR-11-upi-display-section.md) |
+| PR-12 | 2026-01-22 | [PR-12-bot-personalized-link.md](reports/PR-12-bot-personalized-link.md) |
+| PR-13 | 2026-01-22 | [PR-13-seed-mock-registry-items.md](reports/PR-13-seed-mock-registry-items.md) |
 
 ---
 

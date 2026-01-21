@@ -890,23 +890,22 @@ function formatContactsContent(contacts: CoordinatorContact[], language: UserLan
 }
 
 /**
- * Get the gifts page URL based on language
+ * Get personalized wishlist URL with guest's phone number
+ * The language parameter is passed via URL for the wishlist page to handle
  */
-function getGiftsPageUrl(language: UserLanguage): string {
-  const baseUrl = config.publicUrl;
-  switch (language) {
-    case 'HI':
-      return `${baseUrl}/gifts/hi`;
-    case 'PA':
-      return `${baseUrl}/gifts/pa`;
-    default:
-      return `${baseUrl}/gifts`;
-  }
+function getWishlistUrl(guest: Guest): string {
+  const language = guest.user_language || 'EN';
+  const baseUrl = `${config.publicUrl}/wishlist`;
+  const params = new URLSearchParams({
+    phone: guest.phone_number,
+    lang: language.toLowerCase(),
+  });
+  return `${baseUrl}?${params.toString()}`;
 }
 
 async function sendGiftRegistry(guest: Guest): Promise<void> {
   const language = guest.user_language || 'EN';
-  const giftsLink = getGiftsPageUrl(language);
+  const giftsLink = getWishlistUrl(guest);
   const content = getMessageWithValues('gifts.info', language, { giftsLink });
   await sendContentWithBackButton(guest.phone_number, content, language);
 }

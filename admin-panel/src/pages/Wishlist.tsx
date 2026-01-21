@@ -322,11 +322,39 @@ export default function Wishlist() {
           </h2>
           <p className="upi-description">
             {language === 'HI'
-              ? 'आप नीचे दिए गए UPI पते पर भेज सकते हैं:'
+              ? 'आप नीचे दिए गए UPI पते पर भेज सकते हैं या QR कोड स्कैन करें:'
               : language === 'PA'
-                ? 'ਤੁਸੀਂ ਹੇਠਾਂ ਦਿੱਤੇ UPI ਪਤੇ ਤੇ ਭੇਜ ਸਕਦੇ ਹੋ:'
-                : 'You can send to the UPI address below:'}
+                ? 'ਤੁਸੀਂ ਹੇਠਾਂ ਦਿੱਤੇ UPI ਪਤੇ ਤੇ ਭੇਜ ਸਕਦੇ ਹੋ ਜਾਂ QR ਕੋਡ ਸਕੈਨ ਕਰੋ:'
+                : 'You can send to the UPI address below or scan the QR code:'}
           </p>
+          <div className="upi-qr-container">
+            <img
+              className="upi-qr-code"
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`upi://pay?pa=${settings.upiAddress}&pn=Wedding%20Gift`)}`}
+              alt={
+                language === 'HI'
+                  ? 'UPI भुगतान के लिए QR कोड'
+                  : language === 'PA'
+                    ? 'UPI ਭੁਗਤਾਨ ਲਈ QR ਕੋਡ'
+                    : 'QR code for UPI payment'
+              }
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+            <p className="upi-scan-text">
+              {language === 'HI'
+                ? 'भुगतान करने के लिए स्कैन करें'
+                : language === 'PA'
+                  ? 'ਭੁਗਤਾਨ ਕਰਨ ਲਈ ਸਕੈਨ ਕਰੋ'
+                  : 'Scan to pay'}
+            </p>
+          </div>
+          <div className="upi-or-divider">
+            <span>
+              {language === 'HI' ? 'या' : language === 'PA' ? 'ਜਾਂ' : 'or'}
+            </span>
+          </div>
           <div className="upi-address-box">
             <code className="upi-address">{settings.upiAddress}</code>
             <button

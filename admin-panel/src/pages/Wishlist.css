@@ -286,7 +286,54 @@
 .upi-description {
   font-size: 14px;
   color: #9d174d;
+  margin-bottom: 24px;
+}
+
+/* QR Code */
+.upi-qr-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   margin-bottom: 16px;
+}
+
+.upi-qr-code {
+  width: 180px;
+  height: 180px;
+  padding: 12px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.upi-scan-text {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #9d174d;
+  font-weight: 500;
+}
+
+/* Or Divider */
+.upi-or-divider {
+  display: flex;
+  align-items: center;
+  margin: 16px 0;
+}
+
+.upi-or-divider::before,
+.upi-or-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #fbcfe8;
+}
+
+.upi-or-divider span {
+  padding: 0 16px;
+  font-size: 13px;
+  color: #9d174d;
+  text-transform: uppercase;
+  font-weight: 500;
 }
 
 .upi-address-box {
