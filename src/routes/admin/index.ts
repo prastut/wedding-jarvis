@@ -8,6 +8,7 @@ import venuesRouter from './venues';
 import faqsRouter from './faqs';
 import contactsRouter from './contacts';
 import messagesRouter from './messages';
+import registryRouter from './registry';
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use('/venues', venuesRouter);
 router.use('/faqs', faqsRouter);
 router.use('/contacts', contactsRouter);
 router.use('/messages', messagesRouter);
+router.use('/registry', registryRouter);
 
 export default router;

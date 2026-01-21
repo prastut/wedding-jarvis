@@ -239,6 +239,59 @@ export interface ContactFormData {
   is_primary?: boolean;
 }
 
+// Registry Types
+export interface RegistryItem {
+  id: string;
+  name: string;
+  name_hi: string | null;
+  name_pa: string | null;
+  description: string | null;
+  description_hi: string | null;
+  description_pa: string | null;
+  price: number | null;
+  show_price: boolean;
+  image_url: string | null;
+  external_link: string | null;
+  sort_order: number;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RegistryClaim {
+  id: string;
+  item_id: string;
+  guest_id: string;
+  claimed_at: string;
+}
+
+export interface ClaimWithGuest extends RegistryClaim {
+  guest: {
+    id: string;
+    name: string | null;
+    phone_number: string;
+  };
+  item: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface RegistryItemFormData {
+  name: string;
+  name_hi?: string;
+  name_pa?: string;
+  description?: string;
+  description_hi?: string;
+  description_pa?: string;
+  price?: number | null;
+  show_price?: boolean;
+  image_url?: string;
+  external_link?: string;
+  sort_order?: number;
+  is_available?: boolean;
+}
+
 // Message types
 export type MessageStatus = 'sent' | 'delivered' | 'read' | 'failed';
 
@@ -468,4 +521,86 @@ export const adminApi = {
     const query = searchParams.toString();
     return api<ChatHistoryResponse>(`/api/admin/messages/${encodeURIComponent(phone)}${query ? `?${query}` : ''}`);
   },
+
+  // Registry Items
+  getRegistryItems: () => api<{ items: RegistryItem[] }>('/api/admin/registry/items'),
+
+  getRegistryItem: (id: string) => api<{ item: RegistryItem }>(`/api/admin/registry/items/${id}`),
+
+  createRegistryItem: (data: RegistryItemFormData) =>
+    api<{ item: RegistryItem }>('/api/admin/registry/items', { method: 'POST', body: data }),
+
+  updateRegistryItem: (id: string, data: Partial<RegistryItemFormData>) =>
+    api<{ item: RegistryItem }>(`/api/admin/registry/items/${id}`, { method: 'PATCH', body: data }),
+
+  deleteRegistryItem: (id: string) =>
+    api<{ success: boolean }>(`/api/admin/registry/items/${id}`, { method: 'DELETE' }),
+
+  reorderRegistryItems: (orderedIds: string[]) =>
+    api<{ success: boolean }>('/api/admin/registry/items/reorder', {
+      method: 'POST',
+      body: { orderedIds },
+    }),
+
+  importRegistryItems: (csv: string) =>
+    api<{ imported: number; items: RegistryItem[] }>('/api/admin/registry/items/import', {
+      method: 'POST',
+      body: { csv },
+    }),
+
+  // Registry Claims
+  getRegistryClaims: () => api<{ claims: ClaimWithGuest[] }>('/api/admin/registry/claims'),
+
+  releaseClaim: (claimId: string) =>
+    api<{ success: boolean }>(`/api/admin/registry/claims/${claimId}`, { method: 'DELETE' }),
+};
+
+// Guest-facing Registry Types
+export interface GuestRegistryItem {
+  id: string;
+  name: string;
+  name_hi: string | null;
+  name_pa: string | null;
+  description: string | null;
+  description_hi: string | null;
+  description_pa: string | null;
+  price: number | null;
+  show_price: boolean;
+  image_url: string | null;
+  external_link: string | null;
+  is_claimed: boolean;
+  claimed_by_me: boolean;
+}
+
+export interface GuestInfo {
+  id: string;
+  name: string | null;
+  language: 'EN' | 'HI' | 'PA';
+}
+
+export interface RegistrySettings {
+  isOpen: boolean;
+  upiAddress: string | null;
+}
+
+// Guest-facing Registry API (no auth required)
+export const guestApi = {
+  getRegistryItems: (phone: string) =>
+    api<{ items: GuestRegistryItem[]; guest: GuestInfo }>(
+      `/api/registry/items?phone=${encodeURIComponent(phone)}`
+    ),
+
+  claimItem: (phone: string, itemId: string) =>
+    api<{ success: boolean; claim: { id: string; item_id: string; claimed_at: string } }>(
+      `/api/registry/claim?phone=${encodeURIComponent(phone)}`,
+      { method: 'POST', body: { itemId } }
+    ),
+
+  unclaimItem: (phone: string, itemId: string) =>
+    api<{ success: boolean }>(
+      `/api/registry/claim/${itemId}?phone=${encodeURIComponent(phone)}`,
+      { method: 'DELETE' }
+    ),
+
+  getSettings: () => api<RegistrySettings>('/api/registry/settings'),
 };

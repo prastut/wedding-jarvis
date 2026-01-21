@@ -9,6 +9,7 @@ import webhookRouter from './routes/webhook';
 import authRouter from './routes/auth';
 import adminRouter from './routes/admin/index';
 import pagesRouter from './routes/pages';
+import registryRouter from './routes/registry';
 
 // Rate limiters
 const _authLimiter = rateLimit({
@@ -87,6 +88,9 @@ app.use('/api/auth', authRouter); // authLimiter disabled for testing
 
 // Admin routes
 app.use('/api/admin', apiLimiter, adminRouter);
+
+// Guest-facing registry routes (public, but requires phone validation)
+app.use('/api/registry', apiLimiter, registryRouter);
 
 // Public pages (dress code, etc.)
 app.use(pagesRouter);

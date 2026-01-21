@@ -135,6 +135,59 @@ export interface SystemSetting {
   updated_at: string;
 }
 
+// Registry types
+export interface RegistryItem {
+  id: string;
+  name: string;
+  name_hi: string | null;
+  name_pa: string | null;
+  description: string | null;
+  description_hi: string | null;
+  description_pa: string | null;
+  price: number | null;
+  show_price: boolean;
+  image_url: string | null;
+  external_link: string | null;
+  sort_order: number;
+  is_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RegistryClaim {
+  id: string;
+  item_id: string;
+  guest_id: string;
+  claimed_at: string;
+}
+
+export interface RegistryItemInput {
+  name: string;
+  name_hi?: string | null;
+  name_pa?: string | null;
+  description?: string | null;
+  description_hi?: string | null;
+  description_pa?: string | null;
+  price?: number | null;
+  show_price?: boolean;
+  image_url?: string | null;
+  external_link?: string | null;
+  sort_order?: number;
+  is_available?: boolean;
+}
+
+export interface ClaimWithGuest extends RegistryClaim {
+  guest: {
+    id: string;
+    name: string | null;
+    phone_number: string;
+  };
+  item: {
+    id: string;
+    name: string;
+  };
+}
+
 // WhatsApp API types
 export interface WhatsAppInteractiveReply {
   button_reply?: {

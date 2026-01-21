@@ -12,6 +12,8 @@ import Venues from './pages/Venues';
 import FAQs from './pages/FAQs';
 import Contacts from './pages/Contacts';
 import DressCode from './pages/DressCode';
+import Registry from './pages/Registry';
+import Wishlist from './pages/Wishlist';
 import './App.css';
 
 function AppRoutes() {
@@ -23,6 +25,8 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {/* Public routes (no auth required) */}
+      <Route path="/wishlist" element={<Wishlist />} />
       <Route
         path="/login"
         element={user ? <Navigate to="/" replace /> : <Login />}
@@ -44,6 +48,7 @@ function AppRoutes() {
         <Route path="faqs" element={<FAQs />} />
         <Route path="contacts" element={<Contacts />} />
         <Route path="dress-code" element={<DressCode />} />
+        <Route path="registry" element={<Registry />} />
       </Route>
     </Routes>
   );

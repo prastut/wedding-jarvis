@@ -41,6 +41,11 @@ export const config = {
   publicUrl: optionalEnv('PUBLIC_URL', 'https://wedding-jarvis-production.up.railway.app'),
 
   testPhoneNumbers: optionalEnv('TEST_PHONE_NUMBERS', '').split(',').filter(Boolean),
+
+  registry: {
+    upiAddress: optionalEnv('REGISTRY_UPI_ADDRESS', ''),
+    isOpen: optionalEnv('REGISTRY_OPEN', 'true') === 'true',
+  },
 };
 
 export function validateConfig(): void {

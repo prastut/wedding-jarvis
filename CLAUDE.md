@@ -13,9 +13,10 @@ npm run format       # Prettier format src/**/*.ts
 npm run seed         # Populate database with test data
 ```
 
-For admin panel development, run in a separate terminal:
+Admin panel (run in separate terminal):
 ```bash
-cd admin-panel && npm run dev
+cd admin-panel && npm run dev    # Vite dev server with HMR
+cd admin-panel && npm run lint   # ESLint on admin panel
 ```
 
 ## Architecture
@@ -54,6 +55,13 @@ Users text a number to navigate:
 - `5` → Emergency Contact
 - `STOP/START` → Unsubscribe/resubscribe
 - `0/MENU` → Return to main menu
+
+### Multi-language & Side Filtering
+- **Languages**: EN (English), HI (Hindi), PA (Punjabi) - stored in `user_language`
+- **Sides**: Guests are GROOM or BRIDE side - stored in `user_side`
+- Content entities (events, contacts) have a `side` field: GROOM, BRIDE, or BOTH
+- Translatable fields use `_hi` and `_pa` suffixes (e.g., `name`, `name_hi`, `name_pa`)
+- i18n strings are in `src/i18n/` with one file per language
 
 ## Code Style
 

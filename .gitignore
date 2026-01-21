@@ -33,3 +33,6 @@ security_audit_1.md
 
 # Local scripts
 *.local.js
+
+# Progress notes
+PROGRESS.md

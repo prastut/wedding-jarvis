@@ -75,6 +75,9 @@ export default function Layout() {
           <li>
             <NavLink to="/dress-code" onClick={handleNavClick}>Dress Code</NavLink>
           </li>
+          <li>
+            <NavLink to="/registry" onClick={handleNavClick}>Gift Registry</NavLink>
+          </li>
         </ul>
 
         <button onClick={handleLogout} className="logout-btn">
